@@ -72,6 +72,7 @@ def create_param_file(base_param_file, activation_type, output_dir):
     with open(new_path, 'w') as newfile:
         for line in output_lines:
             newfile.write(line)
+    return new_path
 
 
 def main(activation_types):
@@ -85,7 +86,7 @@ def main(activation_types):
 
     for param_file in param_files:
         for activation_type in activation_types:
-            create_param_file(param_file, activation_type, main_dir)
+            create_param_file(param_file, activation_type, output_dir=main_dir)
 
 
 if __name__ == '__main__':

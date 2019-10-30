@@ -15,10 +15,9 @@ RUN_BOTH = False
 THREADS = 6
 
 MAX_CHARGE = 5
-ACTIVATION_LIST = ['HCD', 'AIETD']   # 'ETD', 'HCD', etc. IF NOT USING, SET TO ['']
+# ACTIVATION_LIST = ['HCD', 'AIETD']   # 'ETD', 'HCD', etc. IF NOT USING, SET TO ['']
 # ACTIVATION_LIST = ['AIETD']
-
-# ACTIVATION_LIST = ['']
+ACTIVATION_LIST = None
 
 
 def format_commands(filename, deisotope, output_dir, activation_method=''):
@@ -30,7 +29,7 @@ def format_commands(filename, deisotope, output_dir, activation_method=''):
     :param activation_method: list of activation strings, run each in separate file
     :return: string
     """
-    output_path = os.path.join(os.path.dirname(file), output_dir)
+    output_path = os.path.join(os.path.dirname(filename), output_dir)
     # output_file = os.path.join(output_path, os.path.basename(filename))
     cmd_str = '{} {} --mzML -z --64 -o {}'.format(tool_path, filename, output_path)
     cmd_str += ' --filter "peakPicking true 1-"'
@@ -42,7 +41,7 @@ def format_commands(filename, deisotope, output_dir, activation_method=''):
         if activation_method in ['AIETD', 'EThcD']:
             actual_activation = 'ETD'
         else:
-            actual_activation = activation
+            actual_activation = activation_method
         cmd_str += ' --filter "activation {}"'.format(actual_activation)
 
     if deisotope:
@@ -62,34 +61,40 @@ def run_cmd(command_str):
     subprocess.run(command_str)
 
 
-if __name__ == '__main__':
-    root = tkinter.Tk()
-    root.withdraw()
-
-    files = filedialog.askopenfilenames(filetypes=[('Raw', '.raw')])
-    files = [os.path.join(os.path.dirname(x), x) for x in files]
+def run_msconvert(raw_files, activation_types=None, deisotope=False):
+    """
+    Main method to run msConvert multithreaded with optional splitting by activation types
+    :param raw_files: list of raw file paths to convert
+    :param activation_types: list of strings or None
+    :param deisotope: whether to desiotope with MSConvert
+    :return: void
+    """
     maindir = os.path.dirname(files[0])
     pool = multiprocessing.Pool(processes=THREADS)
 
-    for activation in ACTIVATION_LIST:
+    if activation_types is None:
+        # just run without splitting/filtering
+        activation_types = [None]
+
+    for activation in activation_types:
         # create output directory
         if DEISOTOPE:
-            outputdir = os.path.join(maindir, '{}_deiso'.format(activation))
+            if activation is None:
+                outputdir = os.path.join(maindir, 'deiso')
+            else:
+                outputdir = os.path.join(maindir, '{}_deiso'.format(activation))
         else:
-            outputdir = os.path.join(maindir, activation)
+            if activation is None:
+                outputdir = maindir
+            else:
+                outputdir = os.path.join(maindir, activation)
         if not os.path.exists(outputdir):
             os.makedirs(outputdir)
 
         commands = []
-        for file in files:
-            if RUN_BOTH:
-                cmd = format_commands(file, deisotope=True, activation_method=activation, output_dir=outputdir)
-                commands.append(cmd)
-                cmd = format_commands(file, deisotope=False, activation_method=activation, output_dir=outputdir)
-                commands.append(cmd)
-            else:
-                cmd = format_commands(file, deisotope=DEISOTOPE, activation_method=activation, output_dir=outputdir)
-                commands.append(cmd)
+        for file in raw_files:
+            cmd = format_commands(file, deisotope=deisotope, activation_method=activation, output_dir=outputdir)
+            commands.append(cmd)
 
         results = []
         for cmd in commands:
@@ -100,12 +105,23 @@ if __name__ == '__main__':
             test = result.get()
 
         # rename files by activation type
-        outputfiles = [os.path.join(outputdir, x) for x in os.listdir(outputdir)]
-        for outputfile in outputfiles:
-            old_filename = os.path.splitext(os.path.basename(outputfile))[0]
-            new_filename = '{}_{}{}'.format(old_filename, activation, os.path.splitext(outputfile)[1])
-            new_path = os.path.join(maindir, new_filename)
-            os.rename(outputfile, new_path)
+        if activation is not None:
+            outputfiles = [os.path.join(outputdir, x) for x in os.listdir(outputdir)]
+            for outputfile in outputfiles:
+                old_filename = os.path.splitext(os.path.basename(outputfile))[0]
+                new_filename = '{}_{}{}'.format(old_filename, activation, os.path.splitext(outputfile)[1])
+                new_path = os.path.join(maindir, new_filename)
+                os.rename(outputfile, new_path)
 
     # pool.join()
     pool.close()
+
+
+if __name__ == '__main__':
+    root = tkinter.Tk()
+    root.withdraw()
+
+    files = filedialog.askopenfilenames(filetypes=[('Raw', '.raw')])
+    files = [os.path.join(os.path.dirname(x), x) for x in files]
+
+    run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)

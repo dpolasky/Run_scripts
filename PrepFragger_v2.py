@@ -10,7 +10,8 @@ import shutil
 from dataclasses import dataclass
 import EditParamsByActivation
 
-FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191028.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191029.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.1_20191011.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.1_20191010_forceVarmod.one-jar.jar'
 
 FRAGGER_MEM = 100
@@ -87,7 +88,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
     if not os.path.exists(param_subfolder):
         os.makedirs(param_subfolder)
 
-    if activation_type is not None:
+    if activation_type is not '':
         param_path = EditParamsByActivation.create_param_file(base_param_path, activation_type, output_dir=param_subfolder)
     else:
         param_path = os.path.join(param_subfolder, params_filename)
@@ -118,7 +119,7 @@ def gen_multilevel_shell(run_containers, main_dir):
     :param main_dir: directory in which to save output
     :return: void
     """
-    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi.sh')
+    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi2.sh')
     with open(output_shell_name, 'w', newline='') as shellfile:
         # header
         shellfile.write('#!/bin/bash\nset -xe\n\n')
@@ -226,7 +227,10 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
         elif line.startswith('msfraggerPath'):
             output.append('msfraggerPath=$toolDirPath/{}\n'.format(run_container.fragger_path))
         elif line.startswith('java'):
-            output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.fragger_mem, run_container.activation_type, run_container.raw_format))
+            if run_container.activation_type is '':
+                output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*{}\n'.format(run_container.fragger_mem, run_container.raw_format))
+            else:
+                output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.fragger_mem, run_container.activation_type, run_container.raw_format))
         elif line.startswith('$philosopherPath pipeline'):
             if run_philosopher:
                 output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))

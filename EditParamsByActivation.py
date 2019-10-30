@@ -57,8 +57,10 @@ def create_param_file(base_param_file, activation_type, output_dir):
                     else:
                         newline = edit_param_value(line, 'b,y,c,z')
             elif line.startswith('oxonium_intensity_filter'):
-                if activation_type in ['HCD', 'CID', 'AIETD', 'EThcD']:
+                if activation_type in ['HCD', 'CID', 'EThcD']:
                     newline = edit_param_value(line, 0.1)
+                elif activation_type in ['ETD', 'AIETD']:
+                    newline = edit_param_value(line, 0)
                 else:
                     newline = edit_param_value(line, 0)
             else:

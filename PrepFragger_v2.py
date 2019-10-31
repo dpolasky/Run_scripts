@@ -10,7 +10,7 @@ import shutil
 from dataclasses import dataclass
 import EditParamsByActivation
 
-FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191029.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191031.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.1_20191011.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.1_20191010_forceVarmod.one-jar.jar'
 
@@ -119,7 +119,7 @@ def gen_multilevel_shell(run_containers, main_dir):
     :param main_dir: directory in which to save output
     :return: void
     """
-    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi2.sh')
+    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi.sh')
     with open(output_shell_name, 'w', newline='') as shellfile:
         # header
         shellfile.write('#!/bin/bash\nset -xe\n\n')

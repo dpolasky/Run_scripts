@@ -12,12 +12,16 @@ tool_path = r"C:\Users\dpolasky\AppData\Local\Apps\ProteoWizard 3.0.19296.ebe17a
 out_dir = ''
 DEISOTOPE = False
 RUN_BOTH = False
-THREADS = 6
-
-MAX_CHARGE = 5
+THREADS = 12
+MAX_CHARGE = 6
 # ACTIVATION_LIST = ['HCD', 'AIETD']   # 'ETD', 'HCD', etc. IF NOT USING, SET TO ['']
+# ACTIVATION_LIST = None
 # ACTIVATION_LIST = ['AIETD']
-ACTIVATION_LIST = None
+ACTIVATION_LIST = ['HCD']
+# ACTIVATION_LIST = ['HCD', 'EThcD']
+# ACTIVATION_LIST = ['EThcD']
+# ACTIVATION_LIST = ['HCD', 'ETD']
+# ACTIVATION_LIST = ['ETD']
 
 
 def format_commands(filename, deisotope, output_dir, activation_method=''):
@@ -59,6 +63,28 @@ def run_cmd(command_str):
     :return: void
     """
     subprocess.run(command_str)
+    return command_str
+
+
+def check_results(pool, results_list, commands_list):
+    """
+    Check if results have finished with set timeout period and rerun them if not
+    :param pool:
+    :param results_list:
+    :param commands_list:
+    :return:
+    """
+    results2 = []
+    for index, result in enumerate(results_list):
+        try:
+            test = result.get(timeout=20)
+        except multiprocessing.context.TimeoutError:
+            # this result failed and needs to be rerun
+            test_cmd = commands_list[index]
+            result2 = pool.apply_async(run_cmd, args=[test_cmd])
+            results2.append(result2)
+
+    return results2
 
 
 def run_msconvert(raw_files, activation_types=None, deisotope=False):
@@ -70,13 +96,14 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
     :return: void
     """
     maindir = os.path.dirname(files[0])
-    pool = multiprocessing.Pool(processes=THREADS)
 
     if activation_types is None:
         # just run without splitting/filtering
         activation_types = [None]
 
     for activation in activation_types:
+        pool = multiprocessing.Pool(processes=THREADS)
+
         # create output directory
         if DEISOTOPE:
             if activation is None:
@@ -101,8 +128,12 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
             pool_result = pool.apply_async(run_cmd, args=[cmd])
             results.append(pool_result)
 
-        for result in results:
-            test = result.get()
+        results_check = check_results(pool, results, commands)
+        results_check2 = check_results(pool, results_check, commands)
+
+        # pool.join()
+        pool.terminate()
+        pool.close()
 
         # rename files by activation type
         if activation is not None:
@@ -111,10 +142,11 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
                 old_filename = os.path.splitext(os.path.basename(outputfile))[0]
                 new_filename = '{}_{}{}'.format(old_filename, activation, os.path.splitext(outputfile)[1])
                 new_path = os.path.join(maindir, new_filename)
-                os.rename(outputfile, new_path)
-
-    # pool.join()
-    pool.close()
+                try:
+                    os.rename(outputfile, new_path)
+                except PermissionError:
+                    print('Permission error for file {}'.format(outputfile))
+                    continue
 
 
 if __name__ == '__main__':

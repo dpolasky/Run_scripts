@@ -14,8 +14,9 @@ FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191031.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.1_20191011.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.1_20191010_forceVarmod.one-jar.jar'
 
-FRAGGER_MEM = 100
+FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
+# RAW_FORMAT = '.d'
 
 # SHELL_TEMPLATE = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_SHELL_templates\base_open-offset.sh"
 # SHELL_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_SHELL_templates"
@@ -309,7 +310,11 @@ def parse_template(template_file):
             splits = line.rstrip('\n').split(',')
             if line.startswith('!'):
                 # This is the maindir line - start a new list here
-                current_maindir = splits[2]
+                current_maindir = splits[1]
+                if current_maindir is '':
+                    current_maindir = splits[2]
+                    if current_maindir is '':
+                        raise ValueError('Main dir was not read on line {}, breaking'.format(line))
             elif line is not '\n':
                 # add new analysis to the current
                 param_path = splits[0]

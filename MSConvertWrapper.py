@@ -15,9 +15,9 @@ RUN_BOTH = False
 THREADS = 12
 MAX_CHARGE = 6
 # ACTIVATION_LIST = ['HCD', 'AIETD']   # 'ETD', 'HCD', etc. IF NOT USING, SET TO ['']
-# ACTIVATION_LIST = None
+ACTIVATION_LIST = None
 # ACTIVATION_LIST = ['AIETD']
-ACTIVATION_LIST = ['HCD']
+# ACTIVATION_LIST = ['HCD']
 # ACTIVATION_LIST = ['HCD', 'EThcD']
 # ACTIVATION_LIST = ['EThcD']
 # ACTIVATION_LIST = ['HCD', 'ETD']
@@ -135,6 +135,9 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
         pool.terminate()
         pool.close()
 
+        # kill any remaining MSConvert processes because we're definitely done and having them hang around can cause problems...
+        # kill_msconvert_procs()
+
         # rename files by activation type
         if activation is not None:
             outputfiles = [os.path.join(outputdir, x) for x in os.listdir(outputdir)]
@@ -147,6 +150,38 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
                 except PermissionError:
                     print('Permission error for file {}'.format(outputfile))
                     continue
+    output_files = [os.path.join(maindir, x) for x in os.listdir(maindir) if x.endswith('.mzML')]
+    print('checking {} file outputs...'.format(len(output_files)))
+    bad_files = check_converted_files(output_files)
+    for file in bad_files:
+        print('Bad: {}'.format(file))
+    if len(bad_files) == 0:
+        print('All files extracted successfully')
+
+
+def check_converted_files(file_list):
+    """
+    Figure out which (if any) files did not finish. (Sometimes MSConvert process hang and continue
+    even after their calling workers have been terminated)
+    :param file_list: list of file paths
+    :return: list of bad files
+    """
+    bad_files = []
+    for file in file_list:
+        with open(file, 'r') as readfile:
+            last_line = list(readfile)[-1]
+            if '</indexedmzML' not in last_line:
+                bad_files.append(file)
+    return bad_files
+
+
+def kill_msconvert_procs():
+    """
+    stop all msconvert.exe processes
+    :return: void
+    """
+    handle = subprocess.Popen("msconvert.exe", shell=False)
+    subprocess.Popen("taskkill /F /T /PID %i" % handle.pid, shell=True)
 
 
 if __name__ == '__main__':
@@ -157,3 +192,10 @@ if __name__ == '__main__':
     files = [os.path.join(os.path.dirname(x), x) for x in files]
 
     run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)
+
+    # main_dir = os.path.dirname(files[0])
+    # output_files = [os.path.join(main_dir, x) for x in os.listdir(main_dir) if x.endswith('.mzML')]
+    # bad_files = check_converted_files(output_files)
+    # for file in bad_files:
+    #     print('Bad: {}'.format(file))
+

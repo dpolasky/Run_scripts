@@ -10,7 +10,7 @@ import shutil
 from dataclasses import dataclass
 import EditParamsByActivation
 
-FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191031.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191104.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.1_20191011.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.1_20191010_forceVarmod.one-jar.jar'
 

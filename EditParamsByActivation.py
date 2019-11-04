@@ -63,6 +63,13 @@ def create_param_file(base_param_file, activation_type, output_dir):
                     newline = edit_param_value(line, 0)
                 else:
                     newline = edit_param_value(line, 0)
+            elif line.startswith('labile_mod_no_shifted_by_ions'):
+                # disable labile mod removing b/y ions if in ETD mode, since b/y ions will not be included in the ion series
+                if activation_type in ['ETD']:
+                    newline = edit_param_value(line, 0)
+                else:
+                    # don't enable by default, as we don't always want to use this for HCD/etc searches. (Need to remember to set/unset as needed in base param file)
+                    newline = line
             else:
                 newline = line
             output_lines.append(newline)

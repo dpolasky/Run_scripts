@@ -8,7 +8,7 @@ from tkinter import filedialog
 import os
 import shutil
 from dataclasses import dataclass
-import EditParamsByActivation
+import EditParams
 
 FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191104.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.1_20191011.one-jar.jar'
@@ -38,9 +38,12 @@ class RunContainer(object):
     fragger_mem: int
     raw_format: str
     activation_type: str
+    enzyme_subfolder: str
+    enzyme: str
+    enzyme_yml_path: str
 
 
-def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, main_dir, activation_types):
+def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, main_dir, activation_types, enzymes):
     """
     Generates subfolders for each Fragger .params file found in the provided outer directory. Uses
     params file name as a the subfolder name
@@ -50,6 +53,7 @@ def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, ma
     :param shell_template: single .sh file (full path) to use as template for output shell script
     :param main_dir: top directory in which to make output subdirectories
     :param activation_types: list of strings (standardized 'HCD', 'AIETD', etc)
+    :param enzymes: list of enzyme strings (or '')
     :return: void
     """
     run_containers = []
@@ -57,17 +61,25 @@ def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, ma
         for yml_file in yml_files:
             # For each param file, make a subfolder in each raw subfolder to run that analysis
             for params_file in params_files:
-                if len(activation_types) > 0:
-                    for activation_type in activation_types:
-                        run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, activation_type)
-                        run_containers.append(run_container)
+                if len(enzymes) > 1:
+                    # multi-enzyme run
+                    for enzyme in enzymes:
+                        for activation_type in activation_types:
+                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, activation_type, enzyme)
+                            run_containers.append(run_container)
                 else:
-                    run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir)
-                    run_containers.append(run_container)
+                    # single enzyme run
+                    if len(activation_types) > 0:
+                        for activation_type in activation_types:
+                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, activation_type)
+                            run_containers.append(run_container)
+                    else:
+                        run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir)
+                        run_containers.append(run_container)
     return run_containers
 
 
-def generate_single_run(base_param_path, yml_file, raw_path, shell_template, main_dir, activation_type=None):
+def generate_single_run(base_param_path, yml_file, raw_path, shell_template, main_dir, activation_type=None, enzyme=None):
     """
     Generate a RunContainer from the provided information and return it
     :param base_param_path: .params file for Fragger (path)
@@ -76,6 +88,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
     :param main_dir: where to save results
     :param shell_template: single .sh file (full path) to use as template for output shell script
     :param activation_type: string ('HCD', etc)
+    :param enzyme: string ('TRYP', etc)
     :return: RunContainer
     :rtype: RunContainer
     """
@@ -89,26 +102,53 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
     if not os.path.exists(param_subfolder):
         os.makedirs(param_subfolder)
 
-    if activation_type is not '':
-        param_path = EditParamsByActivation.create_param_file(base_param_path, activation_type, output_dir=param_subfolder)
+    if enzyme is not None:
+        enzyme_subfolder = os.path.join(param_subfolder, enzyme)
+        if not os.path.exists(enzyme_subfolder):
+            os.makedirs(enzyme_subfolder)
+
+        if activation_type is not '':
+            param_path = EditParams.create_param_file(base_param_path, activation_type=activation_type, output_dir=enzyme_subfolder, enzyme=enzyme)
+        else:
+            param_path = EditParams.create_param_file(base_param_path, activation_type=None, output_dir=enzyme_subfolder, enzyme=enzyme)
+
     else:
-        param_path = os.path.join(param_subfolder, params_filename)
-        shutil.copy(base_param_path, param_path)
-        activation_type = ''
+        # single enzyme run
+        if activation_type is not '':
+            param_path = EditParams.create_param_file(base_param_path, activation_type=activation_type, output_dir=param_subfolder)
+        else:
+            param_path = os.path.join(param_subfolder, params_filename)
+            shutil.copy(base_param_path, param_path)
+        enzyme_subfolder = ''
 
     # get database file
     db_file = PrepFraggerRuns.get_db_file(base_param_path)
 
-    # copy yml file for philosopher and edit the fasta path in it
-    yml_output_path = os.path.join(param_subfolder, 'phil_config.yml')
-    shutil.copy(yml_file, yml_output_path)
-    edit_yml(yml_output_path, db_file)
-    yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
+    if enzyme is not None:
+        # make 2 ymls - one for peptide prophet only and one for the main philosopher run
+        enzyme_yml = make_yml_peptideproph_only(yml_file, '../{}'.format(db_file), enzyme, enzyme_subfolder)
+        enzyme_yml_linux = PrepFraggerRuns.update_folder_linux(enzyme_yml)
 
-    # generate single shell for individual runs (if desired)
-    run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path, yml_final_linux_path,
-                                 FRAGGER_JARNAME, FRAGGER_MEM, RAW_FORMAT, activation_type)
-    gen_single_shell_activation(run_container, write_output=True, run_philosopher=True)
+        yml_output_path = os.path.join(param_subfolder, 'phil_config.yml')
+        shutil.copy(yml_file, yml_output_path)
+        edit_yml(yml_output_path, db_file, disable_peptide_prophet=True)
+        yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
+        run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path,
+                                     yml_final_linux_path, FRAGGER_JARNAME, FRAGGER_MEM, RAW_FORMAT, activation_type,
+                                     enzyme_subfolder, enzyme, enzyme_yml_linux)
+        gen_single_shell_activation(run_container, write_output=True, run_philosopher=False)
+
+    else:
+        # copy yml file for philosopher and edit the fasta path in it
+        yml_output_path = os.path.join(param_subfolder, 'phil_config.yml')
+        shutil.copy(yml_file, yml_output_path)
+        edit_yml(yml_output_path, db_file)
+        yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
+
+        # generate single shell for individual runs (if desired)
+        run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path, yml_final_linux_path,
+                                     FRAGGER_JARNAME, FRAGGER_MEM, RAW_FORMAT, activation_type, '', '', '')
+        gen_single_shell_activation(run_container, write_output=True, run_philosopher=True)
     return run_container
 
 
@@ -168,11 +208,12 @@ def gen_philosopher_lines(shell_template_lines):
     return output
 
 
-def edit_yml(yml_file, database_path):
+def edit_yml(yml_file, database_path, disable_peptide_prophet=False):
     """
     Edit the yml file to include the fasta database path
     :param yml_file: path string
     :param database_path: path string
+    :param disable_peptide_prophet: for multi-enzyme searches
     :return: void
     """
     lines = []
@@ -180,10 +221,47 @@ def edit_yml(yml_file, database_path):
         for line in list(readfile):
             if line.startswith('  protein_database'):
                 line = '  protein_database: {}\n'.format(database_path)
+            if line.startswith('  peptideprophet'):
+                if disable_peptide_prophet:
+                    line = '  peptideprophet: no\n'
             lines.append(line)
     with open(yml_file, 'w') as outfile:
         for line in lines:
             outfile.write(line)
+
+
+def make_yml_peptideproph_only(yml_base, database_path, enzyme, output_subfolder):
+    """
+    For multi-enzyme search, make a yml file that only runs peptide prophet in the enyzme subdirectory
+    :param yml_base: base yml file path
+    :param database_path: path to DB **corrected for subfolder**
+    :param enzyme: enzyme string
+    :param output_subfolder: where to save the edited file
+    :return: void
+    """
+    lines = []
+    with open(yml_base, 'r') as readfile:
+        for line in list(readfile):
+            if line.startswith('  protein_database'):
+                line = '  protein_database: {}\n'.format(database_path)
+
+            # turn off the other pipeline items
+            elif line.startswith('  proteinprophet'):
+                line = '  proteinprophet: no\n'
+            elif line.startswith('  filter'):
+                line = '  filter: no\n'
+            elif line.startswith('  report'):
+                line = '  report: no\n'
+            elif line.startswith('  enzyme'):
+                line = '  enzyme: {}\n'.format(EditParams.ENZYME_DATA[enzyme][0])
+            lines.append(line)
+
+    # write output
+    new_path = os.path.join(output_subfolder, os.path.basename('phil_config.yml'))
+    with open(new_path, 'w') as outfile:
+        for line in lines:
+            outfile.write(line)
+    return new_path
 
 
 def get_raw_folder(pathraw_file):
@@ -208,19 +286,27 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
     :param run_philosopher: skip all philosopher lines if false
     :return: list of lines
     """
-    new_shell_name = os.path.join(run_container.subfolder, 'fragger_shell.sh')
+    if run_container.enzyme_subfolder is not '':
+        subfolder = run_container.enzyme_subfolder
+    else:
+        subfolder = run_container.subfolder
+
+    new_shell_name = os.path.join(subfolder, 'fragger_shell.sh')
     shell_lines = PrepFraggerRuns.read_shell(run_container.shell_template)
     output = []
 
     # add a 'cd' to allow pasting together
-    linux_folder = PrepFraggerRuns.update_folder_linux(run_container.subfolder)
+    linux_folder = PrepFraggerRuns.update_folder_linux(subfolder)
     if write_output:
         output.append('#!/bin/bash\nset -xe\n\n')
     output.append('# Change dir to local workspace\ncd {}\n'.format(linux_folder))
 
     for line in shell_lines:
         if line.startswith('fasta'):
-            output.append('fastaPath="{}"\n'.format(run_container.database_file))
+            if run_container.enzyme is not '':
+                output.append('fastaPath="../{}"\n'.format(run_container.database_file))
+            else:
+                output.append('fastaPath="{}"\n'.format(run_container.database_file))
         elif line.startswith('fraggerParams'):
             output.append('fraggerParamsPath="./{}"\n'.format(os.path.basename(run_container.param_file)))
         elif line.startswith('dataDirPath'):
@@ -243,6 +329,14 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
                 output.append(line)
         else:
             output.append(line)
+
+    if run_container.enzyme is not '':
+        # add peptide prophet run and copying out of subfolder
+        output.append('$philosopherPath workspace --clean\n')
+        output.append('$philosopherPath workspace --init\n')
+        output.append('$philosopherPath pipeline --config phil_config.yml ./\n')
+        output.append('analysisName=${PWD##*/}\n')
+        output.append('cp ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
 
     if write_output:
         with open(new_shell_name, 'w', newline='') as shellfile:
@@ -324,7 +418,8 @@ def parse_template(template_file):
                 # yml_path = PrepFraggerRuns.update_folder_linux(splits[1])     # this is done later
                 raw_path = PrepFraggerRuns.update_folder_linux(splits[4])
                 activation_types = splits[1].split(';')
-                run_container_list = prepare_runs_yml(params_files=[param_path], yml_files=[splits[2]], raw_path_files=[raw_path], shell_template=splits[3], main_dir=current_maindir, activation_types=activation_types)
+                enzymes = splits[5].split(';')
+                run_container_list = prepare_runs_yml(params_files=[param_path], yml_files=[splits[2]], raw_path_files=[raw_path], shell_template=splits[3], main_dir=current_maindir, activation_types=activation_types, enzymes=enzymes)
                 run_list.extend(run_container_list)
     return run_list, current_maindir
 

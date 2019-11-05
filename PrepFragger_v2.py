@@ -11,10 +11,9 @@ from dataclasses import dataclass
 import EditParams
 
 FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191104.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.1_20191011.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.1_20191010_forceVarmod.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191105_deiso_nonGlyc.one-jar.jar'
 
-FRAGGER_MEM = 200
+FRAGGER_MEM = 100
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -315,9 +314,15 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
             output.append('msfraggerPath=$toolDirPath/{}\n'.format(run_container.fragger_path))
         elif line.startswith('java'):
             if run_container.activation_type is '':
-                output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*{}\n'.format(run_container.fragger_mem, run_container.raw_format))
+                if run_container.enzyme is '':
+                    output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*{}\n'.format(run_container.fragger_mem, run_container.raw_format))
+                else:
+                    output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.fragger_mem, run_container.enzyme, run_container.raw_format))
             else:
-                output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.fragger_mem, run_container.activation_type, run_container.raw_format))
+                if run_container.enzyme is '':
+                    output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.fragger_mem, run_container.activation_type, run_container.raw_format))
+                else:
+                    output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}_{}{}\n'.format(run_container.fragger_mem, run_container.enzyme, run_container.activation_type, run_container.raw_format))
         elif line.startswith('$philosopherPath pipeline'):
             if run_philosopher:
                 output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))

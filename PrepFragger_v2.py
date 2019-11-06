@@ -330,6 +330,7 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
                 else:
                     # CANNOT run pipeline for multi-enzyme data because it doesn't expect multiple interact.pep.xml files. Run manually
                     print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
+                    output.append('fastaPath="{}"\n'.format(run_container.database_file))
                     output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix')
                     output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml')
                     output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models')

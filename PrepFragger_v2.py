@@ -182,24 +182,33 @@ def gen_multilevel_shell(run_containers, main_dir):
         for index, subfolder in enumerate(all_subfolders):
             shellfile.write('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
             shellfile.write('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
-            phil_lines = gen_philosopher_lines(shell_base)
+            phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
             for line in phil_lines:
                 shellfile.write(line)
             shellfile.write('\n')
 
 
-def gen_philosopher_lines(shell_template_lines):
+def gen_philosopher_lines(shell_template_lines, run_container: RunContainer):
     """
     Generate philosopher instructions for a provided subfolder and shell template
     :param shell_template_lines: lines from standard template passed to run container
+    :param run_container: run container
     :return: list of strings to append to file
     """
     output = []
     for line in shell_template_lines:
         if line.startswith('toolDirPath') or line.startswith('philosopherPath') or line.startswith('$philosopherPath'):
             if line.startswith('$philosopherPath pipeline'):
-                line = '$philosopherPath pipeline --config {} ./\n'.format('phil_config.yml')
-                output.append(line)
+                if run_container.enzyme is '':
+                    output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
+                else:
+                    # CANNOT run pipeline for multi-enzyme data because it doesn't expect multiple interact.pep.xml files. Run manually
+                    print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
+                    output.append('fastaPath="{}"\n'.format(run_container.database_file))
+                    output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix\n')
+                    output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml\n')
+                    output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models\n')
+                    output.append('$philosopherPath report --decoys\n')
             else:
                 output.append(line)
         if line.startswith('analysisName') or line.startswith('cp '):
@@ -325,16 +334,7 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
                     output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}_{}{}\n'.format(run_container.fragger_mem, run_container.enzyme, run_container.activation_type, run_container.raw_format))
         elif line.startswith('$philosopherPath pipeline'):
             if run_philosopher:
-                if run_container.enzyme is not '':
-                    output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
-                else:
-                    # CANNOT run pipeline for multi-enzyme data because it doesn't expect multiple interact.pep.xml files. Run manually
-                    print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
-                    output.append('fastaPath="{}"\n'.format(run_container.database_file))
-                    output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix')
-                    output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml')
-                    output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models')
-                    output.append('$philosopherPath report --decoys')
+                output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
 
         elif line.startswith('$philosopherPath'):
             if run_philosopher:

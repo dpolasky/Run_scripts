@@ -325,7 +325,16 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
                     output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}_{}{}\n'.format(run_container.fragger_mem, run_container.enzyme, run_container.activation_type, run_container.raw_format))
         elif line.startswith('$philosopherPath pipeline'):
             if run_philosopher:
-                output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
+                if run_container.enzyme is not '':
+                    output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
+                else:
+                    # CANNOT run pipeline for multi-enzyme data because it doesn't expect multiple interact.pep.xml files. Run manually
+                    print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
+                    output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix')
+                    output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml')
+                    output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models')
+                    output.append('$philosopherPath report --decoys')
+
         elif line.startswith('$philosopherPath'):
             if run_philosopher:
                 output.append(line)

@@ -206,7 +206,7 @@ def gen_philosopher_lines(shell_template_lines, run_container: RunContainer):
                     print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
                     output.append('fastaPath="{}"\n'.format(run_container.database_file))
                     output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix\n')
-                    output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml\n')
+                    output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 .\n')
                     output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models\n')
                     output.append('$philosopherPath report --decoys\n')
             else:

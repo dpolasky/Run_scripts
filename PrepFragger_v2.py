@@ -10,12 +10,15 @@ import shutil
 from dataclasses import dataclass
 import EditParams
 
-FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191104.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191104.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191111.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191105_deiso_nonGlyc.one-jar.jar'
 
 FRAGGER_MEM = 100
-RAW_FORMAT = '.mzML'
-# RAW_FORMAT = '.d'
+# RAW_FORMAT = '.mzML'
+RAW_FORMAT = '.d'
+
+SPLIT_DB_SCRIPT = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\msfragger_pep_split_20191106.py"
 
 # SHELL_TEMPLATE = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_SHELL_templates\base_open-offset.sh"
 # SHELL_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_SHELL_templates"
@@ -177,15 +180,26 @@ def gen_multilevel_shell(run_containers, main_dir):
             if run_container.subfolder not in all_subfolders:
                 all_subfolders.append(run_container.subfolder)
 
-        # run philosopher
+        # run philosopher in parallel
         shellfile.write('#********************Philosopher Runs*******************\n')
-        for index, subfolder in enumerate(all_subfolders):
-            shellfile.write('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
-            shellfile.write('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
-            phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
-            for line in phil_lines:
-                shellfile.write(line)
-            shellfile.write('\n')
+        shellfile.write('cd ../\n')
+        shellfile.write('for folder in *; do\n')    # loop over everything in results directory
+        shellfile.write('\tif [[ -d $folder ]]; then\n')    # if item is a directory, consider it
+        shellfile.write('\t\tif [[ ! -e $folder/psm.tsv ]]; then\n')    # don't run philosopher if psm.tsv already exists (prevent re-running old results)
+        shellfile.write('\t\t\techo $folder\n')
+        shellfile.write('\t\t\t$folder/phil.sh &> $folder/phil.log &\n')     # run philospher shell script
+        shellfile.write('\t\tfi\n')
+        shellfile.write('\tfi\n')
+        shellfile.write('done\n')
+
+        # old serial philosopher code
+        # for index, subfolder in enumerate(all_subfolders):
+        #     shellfile.write('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
+        #     shellfile.write('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
+        #     phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
+        #     for line in phil_lines:
+        #         shellfile.write(line)
+        #     shellfile.write('\n')
 
 
 def gen_philosopher_lines(shell_template_lines, run_container: RunContainer):
@@ -300,21 +314,27 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
         subfolder = run_container.subfolder
 
     new_shell_name = os.path.join(subfolder, 'fragger_shell.sh')
+    phil_shell_name = os.path.join(subfolder, 'phil.sh')
     shell_lines = PrepFraggerRuns.read_shell(run_container.shell_template)
     output = []
+    phil_output = []
 
     # add a 'cd' to allow pasting together
     linux_folder = PrepFraggerRuns.update_folder_linux(subfolder)
     if write_output:
         output.append('#!/bin/bash\nset -xe\n\n')
+        phil_output.append('#!/bin/bash\nset -x\n\n')
     output.append('# Change dir to local workspace\ncd {}\n'.format(linux_folder))
+    phil_output.append('# Change dir to local workspace\ncd {}\n'.format(linux_folder))
 
     for line in shell_lines:
         if line.startswith('fasta'):
             if run_container.enzyme is not '':
                 output.append('fastaPath="../{}"\n'.format(run_container.database_file))
+                phil_output.append('fastaPath="../{}"\n'.format(run_container.database_file))
             else:
                 output.append('fastaPath="{}"\n'.format(run_container.database_file))
+                phil_output.append('fastaPath="{}"\n'.format(run_container.database_file))
         elif line.startswith('fraggerParams'):
             output.append('fraggerParamsPath="./{}"\n'.format(os.path.basename(run_container.param_file)))
         elif line.startswith('dataDirPath'):
@@ -335,28 +355,36 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
         elif line.startswith('$philosopherPath pipeline'):
             if run_philosopher:
                 output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
-
+                phil_output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
         elif line.startswith('$philosopherPath'):
             if run_philosopher:
                 output.append(line)
+                phil_output.append(line)
         elif line.startswith('analysisName') or line.startswith('cp '):
             if run_philosopher:
                 output.append(line)
+                phil_output.append(line)
+        elif line.startswith('philosopherPath'):
+            output.append(line)
+            phil_output.append(line)
+        elif line.startswith('toolDirPath'):
+            output.append(line)
+            phil_output.append(line)
         else:
             output.append(line)
 
     if run_container.enzyme is not '':
         # add peptide prophet run and copying out of subfolder
-        output.append('$philosopherPath workspace --clean\n')
-        output.append('$philosopherPath workspace --init\n')
-        output.append('$philosopherPath pipeline --config phil_config.yml ./\n')
-        output.append('analysisName=${PWD##*/}\n')
-        output.append('cp ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
+        output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\ncp ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
+        phil_output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\ncp ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
 
     if write_output:
         with open(new_shell_name, 'w', newline='') as shellfile:
             for line in output:
                 shellfile.write(line)
+        with open(phil_shell_name, 'w', newline='') as philfile:
+            for line in phil_output:
+                philfile.write(line)
     return output
 
 

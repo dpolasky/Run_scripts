@@ -14,7 +14,7 @@ import EditParams
 FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191112.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191105_deiso_nonGlyc.one-jar.jar'
 
-FRAGGER_MEM = 300
+FRAGGER_MEM = 100
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -182,7 +182,10 @@ def gen_multilevel_shell(run_containers, main_dir):
 
         # run philosopher in parallel
         shellfile.write('#********************Philosopher Runs*******************\n')
-        shellfile.write('cd ../\n')
+        if run_containers[0].enzyme is not '':
+            shellfile.write('cd ../../\n')      # up two directories if using enzymes, since data is inside enzyme dir
+        else:
+            shellfile.write('cd ../\n')
         shellfile.write('for folder in *; do\n')    # loop over everything in results directory
         shellfile.write('\tif [[ -d $folder ]]; then\n')    # if item is a directory, consider it
         shellfile.write('\t\tif [[ ! -e $folder/psm.tsv ]]; then\n')    # don't run philosopher if psm.tsv already exists (prevent re-running old results)

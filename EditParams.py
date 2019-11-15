@@ -49,6 +49,7 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
     output_lines = []
     with open(base_param_file, 'r') as infile:
         for line in list(infile):
+            newline = None
             if line.startswith('remove_precursor_peak'):
                 if activation_type is not None:
                     if activation_type in ['HCD', 'CID']:

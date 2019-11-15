@@ -11,12 +11,12 @@ from dataclasses import dataclass
 import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191104.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191111.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191112.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191105_deiso_nonGlyc.one-jar.jar'
 
-FRAGGER_MEM = 100
-# RAW_FORMAT = '.mzML'
-RAW_FORMAT = '.d'
+FRAGGER_MEM = 300
+RAW_FORMAT = '.mzML'
+# RAW_FORMAT = '.d'
 
 SPLIT_DB_SCRIPT = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\msfragger_pep_split_20191106.py"
 
@@ -191,6 +191,17 @@ def gen_multilevel_shell(run_containers, main_dir):
         shellfile.write('\t\tfi\n')
         shellfile.write('\tfi\n')
         shellfile.write('done\n')
+
+        # if multienzyme, we also need to prep combined philosopher runs with manual parameters, since the individual philosopher shells don't work (b/c pipeline can't handle multienzyme)
+        if run_containers[0].enzyme is not '':
+            for index, subfolder in enumerate(all_subfolders):
+                phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
+                # save phil.sh to each subfolder so the multithreaded philosopher shell code above has a phil.sh file to find
+                output_shell_path = os.path.join(subfolder, 'phil.sh')
+                with open(output_shell_path, 'w') as phil_shell:
+                    for line in phil_lines:
+                        phil_shell.write(line)
+                    phil_shell.write('\n')
 
         # old serial philosopher code
         # for index, subfolder in enumerate(all_subfolders):

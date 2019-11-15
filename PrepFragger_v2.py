@@ -198,7 +198,7 @@ def gen_multilevel_shell(run_containers, main_dir):
                 phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
                 # save phil.sh to each subfolder so the multithreaded philosopher shell code above has a phil.sh file to find
                 output_shell_path = os.path.join(subfolder, 'phil.sh')
-                with open(output_shell_path, 'w') as phil_shell:
+                with open(output_shell_path, 'w', newline='') as phil_shell:
                     for line in phil_lines:
                         phil_shell.write(line)
                     phil_shell.write('\n')
@@ -220,7 +220,7 @@ def gen_philosopher_lines(shell_template_lines, run_container: RunContainer):
     :param run_container: run container
     :return: list of strings to append to file
     """
-    output = []
+    output = ['#!/bin/bash\nset -xe\n\n']
     for line in shell_template_lines:
         if line.startswith('toolDirPath') or line.startswith('philosopherPath') or line.startswith('$philosopherPath'):
             if line.startswith('$philosopherPath pipeline'):
@@ -231,12 +231,12 @@ def gen_philosopher_lines(shell_template_lines, run_container: RunContainer):
                     print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
                     output.append('fastaPath="{}"\n'.format(run_container.database_file))
                     output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix\n')
-                    output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 .\n')
+                    output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml\n')
                     output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models\n')
                     output.append('$philosopherPath report --decoys\n')
             else:
                 output.append(line)
-        if line.startswith('analysisName') or line.startswith('cp '):
+        if line.startswith('analysisName') or line.startswith('cp ') or line.startswith('decoy'):
             output.append(line)
     return output
 

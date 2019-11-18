@@ -162,7 +162,7 @@ def gen_multilevel_shell(run_containers, main_dir):
     :param main_dir: directory in which to save output
     :return: void
     """
-    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi2.sh')
+    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi.sh')
     with open(output_shell_name, 'w', newline='') as shellfile:
         # header
         shellfile.write('#!/bin/bash\nset -xe\n\n')
@@ -188,7 +188,7 @@ def gen_multilevel_shell(run_containers, main_dir):
             shellfile.write('cd ../\n')
         shellfile.write('for folder in *; do\n')    # loop over everything in results directory
         shellfile.write('\tif [[ -d $folder ]]; then\n')    # if item is a directory, consider it
-        shellfile.write('\t\tif [[ ! -e $folder/psm.tsv ]]; then\n')    # don't run philosopher if psm.tsv already exists (prevent re-running old results)
+        shellfile.write('\t\tif [[ ! -e $folder/psm.tsv ]] && [[ -e $folder/phil.sh ]] ; then\n')    # don't run philosopher if psm.tsv already exists (prevent re-running old results)
         shellfile.write('\t\t\techo $folder\n')
         shellfile.write('\t\t\t$folder/phil.sh &> $folder/phil.log &\n')     # run philospher shell script
         shellfile.write('\t\tfi\n')

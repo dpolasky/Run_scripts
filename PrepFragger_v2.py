@@ -449,10 +449,11 @@ def batch_template_run():
             gen_multilevel_shell(template_run_list, main_dir)
 
 
-def parse_template(template_file):
+def parse_template(template_file, override_maindir=True):
     """
     Read a template into a list of run containers to be run together (or several lists if multiple provided)
     :param template_file: path to template csv
+    :param override_maindir: if true, use param path directory as main dir; otherwise, use provided main dir from template file
     :return: list of list of RunContainers
     """
     run_list = []
@@ -467,10 +468,13 @@ def parse_template(template_file):
                 if current_maindir is '':
                     current_maindir = splits[2]
                     if current_maindir is '':
-                        raise ValueError('Main dir was not read on line {}, breaking'.format(line))
+                        if not override_maindir:
+                            raise ValueError('Main dir was not read on line {}, breaking'.format(line))
             elif line is not '\n':
                 # add new analysis to the current
                 param_path = splits[0]
+                if override_maindir:
+                    current_maindir = os.path.dirname(param_path)
                 # param_path = os.path.join(current_maindir, splits[0])
                 if not param_path.endswith('.params'):
                     param_path += '.params'

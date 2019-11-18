@@ -162,7 +162,7 @@ def gen_multilevel_shell(run_containers, main_dir):
     :param main_dir: directory in which to save output
     :return: void
     """
-    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi.sh')
+    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi2.sh')
     with open(output_shell_name, 'w', newline='') as shellfile:
         # header
         shellfile.write('#!/bin/bash\nset -xe\n\n')
@@ -224,6 +224,8 @@ def gen_philosopher_lines(shell_template_lines, run_container: RunContainer):
     :return: list of strings to append to file
     """
     output = ['#!/bin/bash\nset -xe\n\n']
+    if run_container.enzyme is not '':
+        output.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(run_container.subfolder)))
     for line in shell_template_lines:
         if line.startswith('toolDirPath') or line.startswith('philosopherPath') or line.startswith('$philosopherPath'):
             if line.startswith('$philosopherPath pipeline'):

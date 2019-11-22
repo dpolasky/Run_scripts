@@ -63,7 +63,10 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
                         glyco = True
                     if activation_type in ['HCD', 'CID']:
                         if glyco:
-                            newline = edit_param_value(line, 'b,y,Y')
+                            if 'b~' in line or 'y~' in line:
+                                newline = edit_param_value(line, 'b,y,Y,b~,y~')
+                            else:
+                                newline = edit_param_value(line, 'b,y,Y')
                         else:
                             newline = edit_param_value(line, 'b,y')
                     elif activation_type in ['ETD']:

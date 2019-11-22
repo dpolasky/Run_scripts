@@ -11,12 +11,16 @@ from dataclasses import dataclass
 import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191111_intFilter.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191112.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.2-RC10_20191105_deiso_nonGlyc.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191112.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191121_by203.one-jar.jar'
 
 FRAGGER_MEM = 100
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
+
+RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
+# RUN_IN_PROGRESS = '2'
 
 SPLIT_DB_SCRIPT = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\msfragger_pep_split_20191106.py"
 
@@ -162,7 +166,7 @@ def gen_multilevel_shell(run_containers, main_dir):
     :param main_dir: directory in which to save output
     :return: void
     """
-    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi.sh')
+    output_shell_name = os.path.join(main_dir, 'fragger_shell_multi{}.sh'.format(RUN_IN_PROGRESS))
     with open(output_shell_name, 'w', newline='') as shellfile:
         # header
         shellfile.write('#!/bin/bash\nset -xe\n\n')

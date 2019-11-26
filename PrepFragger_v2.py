@@ -11,9 +11,10 @@ from dataclasses import dataclass
 import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191111_intFilter.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191112.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191126.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191121_by203.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191121_by203.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191122_by203_deisoEnabled.one-jar.jar'
 
 FRAGGER_MEM = 100
 RAW_FORMAT = '.mzML'
@@ -449,8 +450,8 @@ def batch_template_run():
     # Get set(s) of runs from each template and generate a multilevel shell for each
     for template in templates:
         template_run_list, main_dir = parse_template(template)
-        if len(template_run_list) > 1:
-            gen_multilevel_shell(template_run_list, main_dir)
+        # if len(template_run_list) > 1:
+        gen_multilevel_shell(template_run_list, main_dir)
 
 
 def parse_template(template_file, override_maindir=True):

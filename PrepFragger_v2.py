@@ -20,6 +20,8 @@ FRAGGER_MEM = 100
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
+SERIAL_PHILOSOPHER = False      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
+
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 # RUN_IN_PROGRESS = '2'
 
@@ -185,40 +187,41 @@ def gen_multilevel_shell(run_containers, main_dir):
             if run_container.subfolder not in all_subfolders:
                 all_subfolders.append(run_container.subfolder)
 
-        # run philosopher in parallel
-        shellfile.write('#********************Philosopher Runs*******************\n')
-        if run_containers[0].enzyme is not '':
-            shellfile.write('cd ../../\n')      # up two directories if using enzymes, since data is inside enzyme dir
+        if not SERIAL_PHILOSOPHER:
+            # run philosopher in parallel
+            shellfile.write('#********************Philosopher Runs*******************\n')
+            if run_containers[0].enzyme is not '':
+                shellfile.write('cd ../../\n')      # up two directories if using enzymes, since data is inside enzyme dir
+            else:
+                shellfile.write('cd ../\n')
+            shellfile.write('for folder in *; do\n')    # loop over everything in results directory
+            shellfile.write('\tif [[ -d $folder ]]; then\n')    # if item is a directory, consider it
+            shellfile.write('\t\tif [[ ! -e $folder/psm.tsv ]] && [[ -e $folder/phil.sh ]] ; then\n')    # don't run philosopher if psm.tsv already exists (prevent re-running old results)
+            shellfile.write('\t\t\techo $folder\n')
+            shellfile.write('\t\t\t$folder/phil.sh &> $folder/phil.log &\n')     # run philospher shell script
+            shellfile.write('\t\tfi\n')
+            shellfile.write('\tfi\n')
+            shellfile.write('done\n')
+
+            # if multienzyme, we also need to prep combined philosopher runs with manual parameters, since the individual philosopher shells don't work (b/c pipeline can't handle multienzyme)
+            if run_containers[0].enzyme is not '':
+                for index, subfolder in enumerate(all_subfolders):
+                    phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
+                    # save phil.sh to each subfolder so the multithreaded philosopher shell code above has a phil.sh file to find
+                    output_shell_path = os.path.join(subfolder, 'phil.sh')
+                    with open(output_shell_path, 'w', newline='') as phil_shell:
+                        for line in phil_lines:
+                            phil_shell.write(line)
+                        phil_shell.write('\n')
         else:
-            shellfile.write('cd ../\n')
-        shellfile.write('for folder in *; do\n')    # loop over everything in results directory
-        shellfile.write('\tif [[ -d $folder ]]; then\n')    # if item is a directory, consider it
-        shellfile.write('\t\tif [[ ! -e $folder/psm.tsv ]] && [[ -e $folder/phil.sh ]] ; then\n')    # don't run philosopher if psm.tsv already exists (prevent re-running old results)
-        shellfile.write('\t\t\techo $folder\n')
-        shellfile.write('\t\t\t$folder/phil.sh &> $folder/phil.log &\n')     # run philospher shell script
-        shellfile.write('\t\tfi\n')
-        shellfile.write('\tfi\n')
-        shellfile.write('done\n')
-
-        # if multienzyme, we also need to prep combined philosopher runs with manual parameters, since the individual philosopher shells don't work (b/c pipeline can't handle multienzyme)
-        if run_containers[0].enzyme is not '':
+            # old serial philosopher code. Does NOT currently support multi-enzyme mode
             for index, subfolder in enumerate(all_subfolders):
+                shellfile.write('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
+                shellfile.write('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
                 phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
-                # save phil.sh to each subfolder so the multithreaded philosopher shell code above has a phil.sh file to find
-                output_shell_path = os.path.join(subfolder, 'phil.sh')
-                with open(output_shell_path, 'w', newline='') as phil_shell:
-                    for line in phil_lines:
-                        phil_shell.write(line)
-                    phil_shell.write('\n')
-
-        # old serial philosopher code
-        # for index, subfolder in enumerate(all_subfolders):
-        #     shellfile.write('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
-        #     shellfile.write('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
-        #     phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
-        #     for line in phil_lines:
-        #         shellfile.write(line)
-        #     shellfile.write('\n')
+                for line in phil_lines:
+                    shellfile.write(line)
+                shellfile.write('\n')
 
 
 def gen_philosopher_lines(shell_template_lines, run_container: RunContainer):

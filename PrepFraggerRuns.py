@@ -74,6 +74,9 @@ def get_db_file(param_file):
             if line.startswith('database_name'):
                 splits = line.rstrip('\n').split('=')
                 db_file = splits[1].strip()
+                # handle pre-digested fastas (pass the original fasta to Philosopher, leave the digested one for Fragger). Requires that both are in same directory
+                if '_digest.fasta' in db_file:
+                    db_file = db_file.rstrip('_digest.fasta') + '.fasta'
                 return db_file
 
 

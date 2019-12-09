@@ -11,14 +11,14 @@ from dataclasses import dataclass
 import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191111_intFilter.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191204.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191204.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191121_by203.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191205_glyc203.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191203_wError.one-jar.jar'
 
-FRAGGER_MEM = 50
-# RAW_FORMAT = '.mzML'
-RAW_FORMAT = '.d'
+FRAGGER_MEM = 200
+RAW_FORMAT = '.mzML'
+# RAW_FORMAT = '.d'
 
 SERIAL_PHILOSOPHER = False      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
 

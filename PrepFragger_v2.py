@@ -11,12 +11,14 @@ from dataclasses import dataclass
 import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191111_intFilter.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191204.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191205_glyc203.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191205_glyc203.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191203_wError.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
 
-FRAGGER_MEM = 200
+
+FRAGGER_MEM = 400
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -52,21 +54,34 @@ class RunContainer(object):
     enzyme_yml_path: str
 
 
-def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, main_dir, activation_types, enzymes):
+def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, main_dir, activation_types, enzymes, raw_names_list):
     """
     Generates subfolders for each Fragger .params file found in the provided outer directory. Uses
     params file name as a the subfolder name
     :param params_files: list of parameter files to use
     :param yml_files: list of config file with philosopher params
-    :param raw_path_files: list of filenames for .pathraw files
+    :param raw_path_files: list of directories containing raw files
     :param shell_template: single .sh file (full path) to use as template for output shell script
     :param main_dir: top directory in which to make output subdirectories
     :param activation_types: list of strings (standardized 'HCD', 'AIETD', etc)
     :param enzymes: list of enzyme strings (or '')
+    :param raw_names_list: list of raw names (only required if >1 raw path provided)
     :return: void
     """
     run_containers = []
-    for raw_path in raw_path_files:
+    for index, raw_path in enumerate(raw_path_files):
+        # handle raw names to append
+        try:
+            raw_path_append = raw_names_list[index]
+        except IndexError:
+            if index == 0:
+                # no problem - single raw specified so no appending needed
+                raw_path_append = ''
+            else:
+                # more raw directories provided than names, which means a file would be overwritten
+                print('ERROR: more raw paths provided than names; skipping')
+                return []
+
         for yml_file in yml_files:
             # For each param file, make a subfolder in each raw subfolder to run that analysis
             for params_file in params_files:
@@ -74,21 +89,21 @@ def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, ma
                     # multi-enzyme run
                     for enzyme in enzymes:
                         for activation_type in activation_types:
-                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, activation_type, enzyme)
+                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, activation_type=activation_type, enzyme=enzyme, raw_name_append=raw_path_append)
                             run_containers.append(run_container)
                 else:
                     # single enzyme run
                     if len(activation_types) > 0:
                         for activation_type in activation_types:
-                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, activation_type)
+                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, activation_type=activation_type, raw_name_append=raw_path_append)
                             run_containers.append(run_container)
                     else:
-                        run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir)
+                        run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, raw_name_append=raw_path_append)
                         run_containers.append(run_container)
     return run_containers
 
 
-def generate_single_run(base_param_path, yml_file, raw_path, shell_template, main_dir, activation_type=None, enzyme=None):
+def generate_single_run(base_param_path, yml_file, raw_path, shell_template, main_dir, activation_type=None, enzyme=None, raw_name_append=''):
     """
     Generate a RunContainer from the provided information and return it
     :param base_param_path: .params file for Fragger (path)
@@ -98,6 +113,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
     :param shell_template: single .sh file (full path) to use as template for output shell script
     :param activation_type: string ('HCD', etc)
     :param enzyme: string ('TRYP', etc)
+    :param raw_name_append: if provided, append this name to output folder to distinguish between runs of same params on different raw data
     :return: RunContainer
     :rtype: RunContainer
     """
@@ -106,7 +122,11 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         os.makedirs(run_folder)
 
     param_name = os.path.basename(os.path.splitext(base_param_path)[0])
-    param_subfolder = os.path.join(run_folder, param_name)
+    if raw_name_append is not '':
+        combined_name = '{}_{}'.format(param_name, raw_name_append)
+    else:
+        combined_name = param_name
+    param_subfolder = os.path.join(run_folder, combined_name)
     params_filename = param_name + '.params'
     if not os.path.exists(param_subfolder):
         os.makedirs(param_subfolder)
@@ -488,11 +508,15 @@ def parse_template(template_file, override_maindir=True):
                 # param_path = os.path.join(current_maindir, splits[0])
                 if not param_path.endswith('.params'):
                     param_path += '.params'
-                # yml_path = PrepFraggerRuns.update_folder_linux(splits[1])     # this is done later
-                raw_path = PrepFraggerRuns.update_folder_linux(splits[4])
                 activation_types = splits[1].split(';')
                 enzymes = splits[5].split(';')
-                run_container_list = prepare_runs_yml(params_files=[param_path], yml_files=[splits[2]], raw_path_files=[raw_path], shell_template=splits[3], main_dir=current_maindir, activation_types=activation_types, enzymes=enzymes)
+                # raw path(s)
+                raw_path_list = [PrepFraggerRuns.update_folder_linux(x) for x in splits[4].split(';')]
+                raw_names_list = splits[6].split(';')
+                run_container_list = prepare_runs_yml(params_files=[param_path], yml_files=[splits[2]],
+                                                      raw_path_files=raw_path_list, shell_template=splits[3],
+                                                      main_dir=current_maindir, activation_types=activation_types,
+                                                      enzymes=enzymes, raw_names_list=raw_names_list)
                 run_list.extend(run_container_list)
     return run_list, current_maindir
 

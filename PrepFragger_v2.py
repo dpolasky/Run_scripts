@@ -11,21 +11,23 @@ from dataclasses import dataclass
 import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191111_intFilter.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191205_glyc203.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191203_wError.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191218_flexY.one-jar.jar'
 
 
-FRAGGER_MEM = 400
+FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
-SERIAL_PHILOSOPHER = False      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
+SERIAL_PHILOSOPHER = False
+# SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
 
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
-# RUN_IN_PROGRESS = '2'
+# RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (should be obvious, but easy to forget...)
 
 SPLIT_DB_SCRIPT = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\msfragger_pep_split_20191106.py"
 
@@ -240,20 +242,23 @@ def gen_multilevel_shell(run_containers, main_dir):
             for index, subfolder in enumerate(all_subfolders):
                 shellfile.write('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
                 shellfile.write('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
-                phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
+                phil_lines = gen_philosopher_lines(shell_base, run_containers[index], serial=True)
                 for line in phil_lines:
                     shellfile.write(line)
                 shellfile.write('\n')
 
 
-def gen_philosopher_lines(shell_template_lines, run_container: RunContainer):
+def gen_philosopher_lines(shell_template_lines, run_container: RunContainer, serial=False):
     """
     Generate philosopher instructions for a provided subfolder and shell template
     :param shell_template_lines: lines from standard template passed to run container
     :param run_container: run container
     :return: list of strings to append to file
     """
-    output = ['#!/bin/bash\nset -xe\n\n']
+    if serial:
+        output = []
+    else:
+        output = ['#!/bin/bash\nset -xe\n\n']
     if run_container.enzyme is not '':
         output.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(run_container.subfolder)))
     for line in shell_template_lines:

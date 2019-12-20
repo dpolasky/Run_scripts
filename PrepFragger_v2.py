@@ -23,8 +23,8 @@ FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
-SERIAL_PHILOSOPHER = False
-# SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
+# SERIAL_PHILOSOPHER = False
+SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
 
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 # RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (should be obvious, but easy to forget...)

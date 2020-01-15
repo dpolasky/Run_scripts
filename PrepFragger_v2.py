@@ -15,19 +15,20 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191205_glyc203.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191203_wError.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191218_flexY.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191218_flexY.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC13_20200113.one-jar.jar'
 
 
 FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
-# SERIAL_PHILOSOPHER = False
-SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
+SERIAL_PHILOSOPHER = False
+# SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
 
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
-# RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (should be obvious, but easy to forget...)
+# RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (should be obvious, but can be forgotten...)
 
 SPLIT_DB_SCRIPT = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\msfragger_pep_split_20191106.py"
 

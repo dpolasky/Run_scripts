@@ -76,7 +76,8 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
                             newline = edit_param_value(line, 'b,y,c,z,Y')
                         else:
                             newline = edit_param_value(line, 'b,y,c,z')
-            elif line.startswith('diagnostic_fragments_filter'):
+            # elif line.startswith('diagnostic_fragments_filter'):
+            elif line.startswith('oxonium_intensity_filter'):
                 if activation_type is not None:
                     if activation_type in ['HCD', 'CID', 'EThcD']:
                         newline = edit_param_value(line, 0.1)

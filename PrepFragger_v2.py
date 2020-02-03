@@ -16,9 +16,9 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191203_wError.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191218_flexY.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC13_20200113.one-jar.jar'
-
+FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
 
 FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'

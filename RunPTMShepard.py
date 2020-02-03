@@ -13,7 +13,13 @@ import subprocess
 
 TOOL_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\PTMShep_jar\ptmshepherd-0.2.15.jar"
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\OGLYC_PXD009476\Kidney_all"
-RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\OGLYC_PXD009476\Serum"
+# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\OGLYC_PXD009476\Serum"
+
+# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\brain_PXD005411"
+RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\heart_PXD005413"
+# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\kidney_PXD005412"
+# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\liver_PXD005553"
+# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\lung_PXD005555"
 
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\2017_01_19_MB1-4_Glyco"
 
@@ -28,6 +34,8 @@ def main_ptmshep(psm_files):
     """
     main_dir = os.path.dirname(psm_files[0])
     shepherd_dir = os.path.join(main_dir, '_PTMShepherd')
+    if not os.path.exists(shepherd_dir):
+        os.makedirs(shepherd_dir)
 
     # detect primary config file
     config_files = find_specific_files(shepherd_dir, endswith='_config.txt')

@@ -11,17 +11,17 @@ from tkinter import filedialog
 import os
 import subprocess
 
-TOOL_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\PTMShep_jar\ptmshepherd-0.2.15.jar"
+TOOL_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\PTMShep_jar\ptmshepherd-0.2.16.jar"
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\OGLYC_PXD009476\Kidney_all"
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\OGLYC_PXD009476\Serum"
 
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\brain_PXD005411"
-RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\heart_PXD005413"
+# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\heart_PXD005413"
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\kidney_PXD005412"
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\liver_PXD005553"
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\lung_PXD005555"
 
-# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\2017_01_19_MB1-4_Glyco"
+RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\2017_01_19_MB1-4_Glyco"
 
 
 def main_ptmshep(psm_files):

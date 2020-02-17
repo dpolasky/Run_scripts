@@ -19,6 +19,7 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC13_20200113.one-jar.jar'
 FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200210-glycOpen.one-jar.jar'
 
 FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
@@ -30,11 +31,10 @@ SERIAL_PHILOSOPHER = False
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 # RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (should be obvious, but can be forgotten...)
 
-SPLIT_DB_SCRIPT = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\msfragger_pep_split_20191106.py"
-
-# SHELL_TEMPLATE = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_SHELL_templates\base_open-offset.sh"
-# SHELL_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_SHELL_templates"
-# YML_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_YML_templates"
+SPLIT_DBS = 0
+# SPLIT_DBS = 2       # set > 0 if using split database
+SPLIT_PYTHON_PATH = '/storage/teog/anaconda3/bin/python3'  # linux path since this just gets written directly to the shell script
+SPLIT_DB_SCRIPT = '/storage/dpolasky/tools/msfragger_pep_split_20191106.py'
 
 
 @dataclass
@@ -55,6 +55,7 @@ class RunContainer(object):
     enzyme_subfolder: str
     enzyme: str
     enzyme_yml_path: str
+    split_dbs: int      # for splitting database if > 0
 
 
 def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, main_dir, activation_types, enzymes, raw_names_list):
@@ -167,7 +168,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
         run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path,
                                      yml_final_linux_path, FRAGGER_JARNAME, FRAGGER_MEM, RAW_FORMAT, activation_type,
-                                     enzyme_subfolder, enzyme, enzyme_yml_linux)
+                                     enzyme_subfolder, enzyme, enzyme_yml_linux, SPLIT_DBS)
         gen_single_shell_activation(run_container, write_output=True, run_philosopher=False)
 
     else:
@@ -179,7 +180,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
 
         # generate single shell for individual runs (if desired)
         run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path, yml_final_linux_path,
-                                     FRAGGER_JARNAME, FRAGGER_MEM, RAW_FORMAT, activation_type, '', '', '')
+                                     FRAGGER_JARNAME, FRAGGER_MEM, RAW_FORMAT, activation_type, '', '', '', SPLIT_DBS)
         gen_single_shell_activation(run_container, write_output=True, run_philosopher=True)
     return run_container
 
@@ -393,17 +394,27 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
             output.append('dataDirPath="{}"\n'.format(run_container.raw_path))
         elif line.startswith('msfraggerPath'):
             output.append('msfraggerPath=$toolDirPath/{}\n'.format(run_container.fragger_path))
+
         elif line.startswith('java'):
+            # main Fragger command
+            if run_container.split_dbs > 0:
+                # using split DB, so prepend the python script before the fragger command
+                fragger_cmd = '{} {} {} "java -Xmx{}G -jar" '.format(SPLIT_PYTHON_PATH, SPLIT_DB_SCRIPT, run_container.split_dbs, run_container.fragger_mem)
+            else:
+                # not using split DB
+                fragger_cmd = 'java -Xmx{}G -jar '.format(run_container.fragger_mem)
             if run_container.activation_type is '':
                 if run_container.enzyme is '':
-                    output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*{}\n'.format(run_container.fragger_mem, run_container.raw_format))
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*{}\n'.format(run_container.raw_format)
                 else:
-                    output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.fragger_mem, run_container.enzyme, run_container.raw_format))
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.enzyme, run_container.raw_format)
             else:
                 if run_container.enzyme is '':
-                    output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.fragger_mem, run_container.activation_type, run_container.raw_format))
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.activation_type, run_container.raw_format)
                 else:
-                    output.append('java -Xmx{}G -jar $msfraggerPath $fraggerParamsPath $dataDirPath/*_{}_{}{}\n'.format(run_container.fragger_mem, run_container.enzyme, run_container.activation_type, run_container.raw_format))
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}_{}{}\n'.format(run_container.enzyme, run_container.activation_type, run_container.raw_format)
+            output.append(fragger_cmd)
+
         elif line.startswith('$philosopherPath pipeline'):
             if run_philosopher:
                 output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))

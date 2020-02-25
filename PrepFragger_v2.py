@@ -12,16 +12,13 @@ import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191111_intFilter.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191205_glyc203.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC5_20191203_wError.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191218_flexY.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC13_20200113.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200210-glycOpen.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4-RC3_20200220_glycCalOffsets.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4-RC4_20200225-testGlyc.one-jar.jar'
 
-FRAGGER_MEM = 200
+FRAGGER_MEM = 450
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -150,8 +147,9 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         if activation_type is not '':
             param_path = EditParams.create_param_file(base_param_path, activation_type=activation_type, output_dir=param_subfolder)
         else:
-            param_path = os.path.join(param_subfolder, params_filename)
-            shutil.copy(base_param_path, param_path)
+            param_path = EditParams.create_param_file(base_param_path, activation_type=None, output_dir=param_subfolder)
+            # param_path = os.path.join(param_subfolder, params_filename)
+            # shutil.copy(base_param_path, param_path)
         enzyme_subfolder = ''
 
     # get database file

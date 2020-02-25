@@ -21,7 +21,10 @@ TOOL_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\PTMShep_jar\ptms
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\liver_PXD005553"
 # RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\pGlyco2\lung_PXD005555"
 
-RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\2017_01_19_MB1-4_Glyco"
+# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\2017_01_19_MB1-4_Glyco"
+# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\Heck_extRange\M6P_CHO"
+# RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\Heck_extRange\milk_human"
+RAW_DIR = r"\\corexfs.med.umich.edu\proteomics\dpolasky\data\glyco\Heck_extRange\sialyated_CHO"
 
 
 def main_ptmshep(psm_files):

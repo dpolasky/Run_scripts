@@ -14,6 +14,32 @@ ENZYME_DATA = {'TRYP': ['Trypsin', 'KR', 'P'],
                'TRYP+CHYTR': ['Trypsin/Chymotrypsin', 'KRFLWY', 'P']
                }
 
+DEPRECATE_DICT = {'offset_rule_mode': 'glyco_search_mode',
+                  # 'Y_type_masses': '',
+                  # 'diagnostic_fragments': '',
+                  'diagnostic_fragments_filter': 'oxonium_intensity_filter'
+                  }
+
+
+def deprecated_param_check(line, deprecation_dict):
+    """
+    Check for lines that have old/deprecated parameters and fix them using the known dict
+    :param line: param file line to read
+    :type line: str
+    :param deprecation_dict: dict of old line: new line to use for fixing
+    :type deprecation_dict: dict
+    :return: updated line
+    :rtype: str
+    """
+    splits = line.split('=')
+    old_key = splits[0].strip()
+    if old_key in deprecation_dict.keys():
+        # this parameter name has been deprecated. Replace it with the new version
+        newline = '{} ={}'.format(deprecation_dict[old_key], splits[1])     # splits[1] still has \n at the end
+        return newline
+    else:
+        return line
+
 
 def edit_param_value(line, new_value):
     """
@@ -49,6 +75,8 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
     output_lines = []
     with open(base_param_file, 'r') as infile:
         for line in list(infile):
+            # check/replace deprecated params
+            line = deprecated_param_check(line, DEPRECATE_DICT)
             newline = None
             if line.startswith('remove_precursor_peak'):
                 if activation_type is not None:

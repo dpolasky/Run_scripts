@@ -16,9 +16,9 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC3_20200220_glycCalOffsets.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4-RC4_20200225-testGlyc.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4-RC4_20200225_glyco.one-jar.jar'
 
-FRAGGER_MEM = 450
+FRAGGER_MEM = 100
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 

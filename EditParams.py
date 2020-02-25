@@ -121,6 +121,11 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
                     else:
                         # don't enable by default, as we don't always want to use this for HCD/etc searches. (Need to remember to set/unset as needed in base param file)
                         newline = line
+            elif line.startswith('localize_delta_mass'):
+                # disable shifted ions for CID/HCD glyco searches
+                if activation_type is not None:
+                    if activation_type in ['CID', 'HCD']:
+                        newline = edit_param_value(line, 0)
 
             # enzyme params
             elif line.startswith('search_enzyme_name'):

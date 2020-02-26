@@ -86,21 +86,21 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
                         newline = edit_param_value(line, 2)
             elif line.startswith('fragment_ion_series'):
                 if activation_type is not None:
-                    glyco = False
-                    if 'Y' in line:
-                        glyco = True
+                    check_line = line.split('#')[0]     # ignore comments
                     if activation_type in ['HCD', 'CID']:
-                        if glyco:
-                            if 'b~' in line or 'y~' in line:
+                        if 'b~' in check_line or 'y~' in check_line:
+                            if 'Y' in check_line:
                                 newline = edit_param_value(line, 'b,y,Y,b~,y~')
                             else:
-                                newline = edit_param_value(line, 'b,y,Y')
+                                newline = edit_param_value(line, 'b,y,b~,y~')
+                        elif 'Y' in check_line:
+                            newline = edit_param_value(line, 'b,y,Y')
                         else:
                             newline = edit_param_value(line, 'b,y')
                     elif activation_type in ['ETD']:
                         newline = edit_param_value(line, 'c,z')
                     elif activation_type in ['AIETD', 'EThcD']:
-                        if glyco:
+                        if 'Y' in check_line:
                             newline = edit_param_value(line, 'b,y,c,z,Y')
                         else:
                             newline = edit_param_value(line, 'b,y,c,z')

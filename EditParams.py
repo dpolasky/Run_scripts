@@ -13,12 +13,13 @@ ENZYME_DATA = {'TRYP': ['Trypsin', 'KR', 'P'],
                'CHYTR': ['Chymotrypsin', 'FLWY', 'P'],
                'TRYP+CHYTR': ['Trypsin/Chymotrypsin', 'KRFLWY', 'P']
                }
-
-DEPRECATE_DICT = {'offset_rule_mode': 'glyco_search_mode',
-                  # 'Y_type_masses': '',
-                  # 'diagnostic_fragments': '',
-                  'diagnostic_fragments_filter': 'oxonium_intensity_filter'
-                  }
+DEPRECATE_DICT = {
+    'offset_rule_mode': 'glyco_search_mode',
+    # 'glyco_search_mode': 'offset_rule_mode',
+    # 'Y_type_masses': '',
+    # 'diagnostic_fragments': '',
+    'diagnostic_fragments_filter': 'oxonium_intensity_filter'
+}
 
 
 def deprecated_param_check(line, deprecation_dict):
@@ -52,7 +53,7 @@ def edit_param_value(line, new_value):
     return '{}= {}\n'.format(splits[0], new_value)
 
 
-def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=None):
+def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=None, remove_localize_delta_mass=False):
     """
     Create a new param file based on the base param file, edited for the provided activation type
     :param base_param_file:
@@ -122,10 +123,11 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
                         # don't enable by default, as we don't always want to use this for HCD/etc searches. (Need to remember to set/unset as needed in base param file)
                         newline = line
             elif line.startswith('localize_delta_mass'):
-                # disable shifted ions for CID/HCD glyco searches
-                if activation_type is not None:
-                    if activation_type in ['CID', 'HCD']:
-                        newline = edit_param_value(line, 0)
+                if remove_localize_delta_mass:
+                    # disable shifted ions for CID/HCD glyco searches
+                    if activation_type is not None:
+                        if activation_type in ['CID', 'HCD']:
+                            newline = edit_param_value(line, 0)
 
             # enzyme params
             elif line.startswith('search_enzyme_name'):

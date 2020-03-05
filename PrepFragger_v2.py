@@ -14,11 +14,15 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC3_20200220_glycCalOffsets.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4-RC4_20200225_glyco.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200301-calOffsets.one-jar.jar'   # same as 2/28 full fix, except WITH cal offsets
 
-FRAGGER_MEM = 100
+# FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200228-fix-full.one-jar.jar'       # correct glyco1.0, no cal offsets
+# FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200303-noRebaseWithFixes-noCalOffset.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200304.one-jar.jar'
+
+FRAGGER_MEM = 50
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -27,6 +31,9 @@ SERIAL_PHILOSOPHER = False
 
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 # RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (should be obvious, but can be forgotten...)
+
+# REMOVE_LOCALIZE_DELTAMASS = True
+REMOVE_LOCALIZE_DELTAMASS = False   # default
 
 SPLIT_DBS = 0
 # SPLIT_DBS = 2       # set > 0 if using split database
@@ -138,16 +145,16 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
             os.makedirs(enzyme_subfolder)
 
         if activation_type is not '':
-            param_path = EditParams.create_param_file(base_param_path, activation_type=activation_type, output_dir=enzyme_subfolder, enzyme=enzyme)
+            param_path = EditParams.create_param_file(base_param_path, activation_type=activation_type, output_dir=enzyme_subfolder, enzyme=enzyme, remove_localize_delta_mass=REMOVE_LOCALIZE_DELTAMASS)
         else:
-            param_path = EditParams.create_param_file(base_param_path, activation_type=None, output_dir=enzyme_subfolder, enzyme=enzyme)
+            param_path = EditParams.create_param_file(base_param_path, activation_type=None, output_dir=enzyme_subfolder, enzyme=enzyme, remove_localize_delta_mass=REMOVE_LOCALIZE_DELTAMASS)
 
     else:
         # single enzyme run
         if activation_type is not '':
-            param_path = EditParams.create_param_file(base_param_path, activation_type=activation_type, output_dir=param_subfolder)
+            param_path = EditParams.create_param_file(base_param_path, activation_type=activation_type, output_dir=param_subfolder, remove_localize_delta_mass=REMOVE_LOCALIZE_DELTAMASS)
         else:
-            param_path = EditParams.create_param_file(base_param_path, activation_type=None, output_dir=param_subfolder)
+            param_path = EditParams.create_param_file(base_param_path, activation_type=None, output_dir=param_subfolder, remove_localize_delta_mass=REMOVE_LOCALIZE_DELTAMASS)
             # param_path = os.path.join(param_subfolder, params_filename)
             # shutil.copy(base_param_path, param_path)
         enzyme_subfolder = ''
@@ -411,7 +418,9 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
                     fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.activation_type, run_container.raw_format)
                 else:
                     fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}_{}{}\n'.format(run_container.enzyme, run_container.activation_type, run_container.raw_format)
+            output.append('start_time=$(date)\necho $start_time\n')
             output.append(fragger_cmd)
+            output.append('end_time=$(date)\necho $end_time\n')
 
         elif line.startswith('$philosopherPath pipeline'):
             if run_philosopher:

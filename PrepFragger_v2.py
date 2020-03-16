@@ -20,11 +20,14 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200228-fix-full.one-jar.jar'       # correct glyco1.0, no cal offsets
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200303-noRebaseWithFixes-noCalOffset.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200304.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'
 
-FRAGGER_MEM = 50
+FRAGGER_MEM = 100
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
+
+# OVERRIDE_MAINDIR = False
+OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
 
 SERIAL_PHILOSOPHER = False
 # SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
@@ -36,7 +39,7 @@ RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 REMOVE_LOCALIZE_DELTAMASS = False   # default
 
 SPLIT_DBS = 0
-# SPLIT_DBS = 2       # set > 0 if using split database
+# SPLIT_DBS = 3       # set > 0 if using split database
 SPLIT_PYTHON_PATH = '/storage/teog/anaconda3/bin/python3'  # linux path since this just gets written directly to the shell script
 SPLIT_DB_SCRIPT = '/storage/dpolasky/tools/msfragger_pep_split_20191106.py'
 
@@ -395,6 +398,7 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
                 phil_output.append('fastaPath="{}"\n'.format(run_container.database_file))
         elif line.startswith('fraggerParams'):
             output.append('fraggerParamsPath="./{}"\n'.format(os.path.basename(run_container.param_file)))
+            # output.append('fraggerParamsPath="{}"\n'.format(PrepFraggerRuns.update_folder_linux(run_container.param_file)))
         elif line.startswith('dataDirPath'):
             output.append('dataDirPath="{}"\n'.format(run_container.raw_path))
         elif line.startswith('msfraggerPath'):
@@ -418,9 +422,9 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
                     fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.activation_type, run_container.raw_format)
                 else:
                     fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}_{}{}\n'.format(run_container.enzyme, run_container.activation_type, run_container.raw_format)
-            output.append('start_time=$(date)\necho $start_time\n')
+            output.append('start_time=$(date)\n')
             output.append(fragger_cmd)
-            output.append('end_time=$(date)\necho $end_time\n')
+            output.append('end_time=$(date)\n')
 
         elif line.startswith('$philosopherPath pipeline'):
             if run_philosopher:
@@ -490,7 +494,7 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
 #         gen_multilevel_shell(all_runs, maindir)
 
 
-def batch_template_run():
+def batch_template_run(override_maindir):
     """
     Select and load template file(s) to be run
     :return: void
@@ -498,7 +502,7 @@ def batch_template_run():
     templates = filedialog.askopenfilenames(filetypes=[('Templates', '.csv')])
     # Get set(s) of runs from each template and generate a multilevel shell for each
     for template in templates:
-        template_run_list, main_dir = parse_template(template)
+        template_run_list, main_dir = parse_template(template, override_maindir)
         # if len(template_run_list) > 1:
         gen_multilevel_shell(template_run_list, main_dir)
 
@@ -551,4 +555,4 @@ if __name__ == '__main__':
 
     # main(batch_mode=False)
     # main(batch_mode=True)
-    batch_template_run()
+    batch_template_run(OVERRIDE_MAINDIR)

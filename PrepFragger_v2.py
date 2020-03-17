@@ -26,8 +26,8 @@ FRAGGER_MEM = 100
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
-# OVERRIDE_MAINDIR = False
-OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
+OVERRIDE_MAINDIR = False
+# OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
 
 SERIAL_PHILOSOPHER = False
 # SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
@@ -193,12 +193,13 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
     return run_container
 
 
-def gen_multilevel_shell(run_containers, main_dir):
+def gen_multilevel_shell(run_containers, main_dir, run_folders=None):
     """
     Generate a shell script to navigate the generated file structure and run all requested analyses
     :param run_containers: list of run containers to generate a shell script to run all of
     :type run_containers: list[RunContainer]
     :param main_dir: directory in which to save output
+    :param run_folders: if doing a combined run on an outer dir, want to run Philosopher on the run subfolders rather than the main dir
     :return: void
     """
     output_shell_name = os.path.join(main_dir, 'fragger_shell_multi{}.sh'.format(RUN_IN_PROGRESS))
@@ -224,31 +225,20 @@ def gen_multilevel_shell(run_containers, main_dir):
             if not RAW_FORMAT == '.d':
                 # run philosopher in parallel
                 shellfile.write('#********************Philosopher Runs*******************\n')
-                if run_containers[0].enzyme is not '':
-                    shellfile.write('cd ../../\n')      # up two directories if using enzymes, since data is inside enzyme dir
+                if run_folders is None:
+                    if run_containers[0].enzyme is not '':
+                        shellfile.write('cd ../../\n')      # up two directories if using enzymes, since data is inside enzyme dir
+                    else:
+                        shellfile.write('cd ../\n')
+                    write_multi_phil(shellfile, run_containers, all_subfolders, shell_base)
                 else:
-                    shellfile.write('cd ../\n')
-                shellfile.write('for folder in *; do\n')    # loop over everything in results directory
-                shellfile.write('\tif [[ -d $folder ]]; then\n')    # if item is a directory, consider it
-                shellfile.write('\t\tif [[ ! -e $folder/psm.tsv ]] && [[ -e $folder/phil.sh ]] ; then\n')    # don't run philosopher if psm.tsv already exists (prevent re-running old results)
-                shellfile.write('\t\t\techo $folder\n')
-                shellfile.write('\t\t\t$folder/phil.sh &> $folder/phil.log &\n')     # run philospher shell script
-                shellfile.write('\t\tfi\n')
-                shellfile.write('\tfi\n')
-                shellfile.write('done\n')
+                    # multiple run subfolders. CD to each in the list in turn
+                    for run_folder in run_folders:
+                        shellfile.write('cd {}/__FraggerResults\n'.format(PrepFraggerRuns.update_folder_linux(run_folder)))
+                        write_multi_phil(shellfile, run_containers, all_subfolders, shell_base)
 
-                # if multienzyme, we also need to prep combined philosopher runs with manual parameters, since the individual philosopher shells don't work (b/c pipeline can't handle multienzyme)
-                if run_containers[0].enzyme is not '':
-                    for index, subfolder in enumerate(all_subfolders):
-                        phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
-                        # save phil.sh to each subfolder so the multithreaded philosopher shell code above has a phil.sh file to find
-                        output_shell_path = os.path.join(subfolder, 'phil.sh')
-                        with open(output_shell_path, 'w', newline='') as phil_shell:
-                            for line in phil_lines:
-                                phil_shell.write(line)
-                            phil_shell.write('\n')
         else:
-            # old serial philosopher code. Does NOT currently support multi-enzyme mode
+            # old serial philosopher code. Does NOT currently support multi-enzyme mode or outer directory fanciness
             for index, subfolder in enumerate(all_subfolders):
                 shellfile.write('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
                 shellfile.write('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
@@ -256,6 +246,35 @@ def gen_multilevel_shell(run_containers, main_dir):
                 for line in phil_lines:
                     shellfile.write(line)
                 shellfile.write('\n')
+
+
+def write_multi_phil(shellfile, run_containers, all_subfolders, shell_base):
+    """
+    helper for writing out the multitrheaded philosopher shell code to call in multiple places. Assumes that:
+    1) shellfile is already open for writing
+    2) a 'cd' to the correct outer directory has already been performed
+    :return: void
+    :rtype:
+    """
+    shellfile.write('for folder in *; do\n')  # loop over everything in results directory
+    shellfile.write('\tif [[ -d $folder ]]; then\n')  # if item is a directory, consider it
+    shellfile.write('\t\tif [[ ! -e $folder/psm.tsv ]] && [[ -e $folder/phil.sh ]] ; then\n')  # don't run philosopher if psm.tsv already exists (prevent re-running old results)
+    shellfile.write('\t\t\techo $folder\n')
+    shellfile.write('\t\t\t$folder/phil.sh &> $folder/phil.log &\n')  # run philospher shell script
+    shellfile.write('\t\tfi\n')
+    shellfile.write('\tfi\n')
+    shellfile.write('done\n')
+
+    # if multienzyme, we also need to prep combined philosopher runs with manual parameters, since the individual philosopher shells don't work (b/c pipeline can't handle multienzyme)
+    if run_containers[0].enzyme is not '':
+        for index, subfolder in enumerate(all_subfolders):
+            phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
+            # save phil.sh to each subfolder so the multithreaded philosopher shell code above has a phil.sh file to find
+            output_shell_path = os.path.join(subfolder, 'phil.sh')
+            with open(output_shell_path, 'w', newline='') as phil_shell:
+                for line in phil_lines:
+                    phil_shell.write(line)
+                phil_shell.write('\n')
 
 
 def gen_philosopher_lines(shell_template_lines, run_container: RunContainer, serial=False):
@@ -502,9 +521,12 @@ def batch_template_run(override_maindir):
     templates = filedialog.askopenfilenames(filetypes=[('Templates', '.csv')])
     # Get set(s) of runs from each template and generate a multilevel shell for each
     for template in templates:
-        template_run_list, main_dir = parse_template(template, override_maindir)
+        template_run_list, main_dir, run_folders = parse_template(template, override_maindir)
         # if len(template_run_list) > 1:
-        gen_multilevel_shell(template_run_list, main_dir)
+        if not override_maindir:
+            gen_multilevel_shell(template_run_list, main_dir, run_folders)
+        else:
+            gen_multilevel_shell(template_run_list, main_dir)
 
 
 def parse_template(template_file, override_maindir=True):
@@ -515,6 +537,7 @@ def parse_template(template_file, override_maindir=True):
     :return: list of list of RunContainers
     """
     run_list = []
+    run_folders = []
     with open(template_file, 'r') as tempfile:
         for line in list(tempfile):
             if line.startswith('#'):
@@ -528,11 +551,15 @@ def parse_template(template_file, override_maindir=True):
                     if current_maindir is '':
                         if not override_maindir:
                             raise ValueError('Main dir was not read on line {}, breaking'.format(line))
+                if not override_maindir:
+                    return_maindir = current_maindir    # this maindir is used ONLY for the final shell. All params/results stay in their subfolders
+
             elif line is not '\n':
                 # add new analysis to the current
                 param_path = splits[0]
-                if override_maindir:
-                    current_maindir = os.path.dirname(param_path)
+                current_maindir = os.path.dirname(param_path)
+                if current_maindir not in run_folders:
+                    run_folders.append(current_maindir)
                 # param_path = os.path.join(current_maindir, splits[0])
                 if not param_path.endswith('.params'):
                     param_path += '.params'
@@ -546,7 +573,7 @@ def parse_template(template_file, override_maindir=True):
                                                       main_dir=current_maindir, activation_types=activation_types,
                                                       enzymes=enzymes, raw_names_list=raw_names_list)
                 run_list.extend(run_container_list)
-    return run_list, current_maindir
+    return run_list, return_maindir, run_folders
 
 
 if __name__ == '__main__':

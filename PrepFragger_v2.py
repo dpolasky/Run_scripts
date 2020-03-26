@@ -20,14 +20,15 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200228-fix-full.one-jar.jar'       # correct glyco1.0, no cal offsets
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200303-noRebaseWithFixes-noCalOffset.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'
 
-FRAGGER_MEM = 100
-RAW_FORMAT = '.mzML'
-# RAW_FORMAT = '.d'
+FRAGGER_MEM = 200
+# RAW_FORMAT = '.mzML'
+RAW_FORMAT = '.d'
 
-OVERRIDE_MAINDIR = False
-# OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
+# OVERRIDE_MAINDIR = False
+OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
 
 SERIAL_PHILOSOPHER = False
 # SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
@@ -39,7 +40,7 @@ RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 REMOVE_LOCALIZE_DELTAMASS = False   # default
 
 SPLIT_DBS = 0
-# SPLIT_DBS = 3       # set > 0 if using split database
+# SPLIT_DBS = 5       # set > 0 if using split database
 SPLIT_PYTHON_PATH = '/storage/teog/anaconda3/bin/python3'  # linux path since this just gets written directly to the shell script
 SPLIT_DB_SCRIPT = '/storage/dpolasky/tools/msfragger_pep_split_20191106.py'
 
@@ -558,6 +559,8 @@ def parse_template(template_file, override_maindir=True):
                 # add new analysis to the current
                 param_path = splits[0]
                 current_maindir = os.path.dirname(param_path)
+                if override_maindir:
+                    return_maindir = current_maindir
                 if current_maindir not in run_folders:
                     run_folders.append(current_maindir)
                 # param_path = os.path.join(current_maindir, splits[0])

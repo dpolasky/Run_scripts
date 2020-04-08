@@ -10,7 +10,7 @@ import shutil
 from dataclasses import dataclass
 import EditParams
 
-# FRAGGER_JARNAME = 'msfragger-2.3-RC2_20191111_intFilter.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4_20200407_noMerge-noPkCombine.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
@@ -21,11 +21,11 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200228-fix-full.one-jar.jar'       # correct glyco1.0, no cal offsets
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200303-noRebaseWithFixes-noCalOffset.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'
 
-FRAGGER_MEM = 200
-# RAW_FORMAT = '.mzML'
-RAW_FORMAT = '.d'
+FRAGGER_MEM = 300
+RAW_FORMAT = '.mzML'
+# RAW_FORMAT = '.d'
 
 # OVERRIDE_MAINDIR = False
 OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
@@ -40,7 +40,7 @@ RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 REMOVE_LOCALIZE_DELTAMASS = False   # default
 
 SPLIT_DBS = 0
-# SPLIT_DBS = 5       # set > 0 if using split database
+# SPLIT_DBS = 7       # set > 0 if using split database
 SPLIT_PYTHON_PATH = '/storage/teog/anaconda3/bin/python3'  # linux path since this just gets written directly to the shell script
 SPLIT_DB_SCRIPT = '/storage/dpolasky/tools/msfragger_pep_split_20191106.py'
 
@@ -291,6 +291,9 @@ def gen_philosopher_lines(shell_template_lines, run_container: RunContainer, ser
         output = ['#!/bin/bash\nset -xe\n\n']
     if run_container.enzyme is not '':
         output.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(run_container.subfolder)))
+        # add check to avoid running on empty directories and filling up /tmp/
+        output = check_empty_phil(output)
+
     for line in shell_template_lines:
         if line.startswith('toolDirPath') or line.startswith('philosopherPath') or line.startswith('$philosopherPath'):
             if line.startswith('$philosopherPath pipeline'):
@@ -331,6 +334,24 @@ def edit_yml(yml_file, database_path, disable_peptide_prophet=False):
     with open(yml_file, 'w') as outfile:
         for line in lines:
             outfile.write(line)
+
+
+def check_empty_phil(output):
+    """
+    Add check for empty files to philosopher shell script
+    :param output: list of string lines to save
+    :type output: list
+    :return: updated output
+    :rtype: list
+    """
+    output.append('found=false\n')
+    output.append('for file in ./*.pepXML; do\n')
+    output.append('\tif [ -e $file ]; then\n')
+    output.append('\t\tfound=true\n\t\tbreak\n')
+    output.append('\tfi\ndone\n')
+    output.append('if [ $found == false ]; then\n')
+    output.append('\techo "no .pepXML files found. NOT running Philosopher"\n\texit\nfi\n')
+    return output
 
 
 def make_yml_peptideproph_only(yml_base, database_path, enzyme, output_subfolder):
@@ -407,6 +428,7 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
         phil_output.append('#!/bin/bash\nset -x\n\n')
     output.append('# Change dir to local workspace\ncd {}\n'.format(linux_folder))
     phil_output.append('# Change dir to local workspace\ncd {}\n'.format(linux_folder))
+    phil_output = check_empty_phil(phil_output)
 
     for line in shell_lines:
         if line.startswith('fasta'):

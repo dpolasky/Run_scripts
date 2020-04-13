@@ -11,7 +11,9 @@ import os
 # Fragger params data - enzyme name, cut after, cut not before
 ENZYME_DATA = {'TRYP': ['Trypsin', 'KR', 'P'],
                'CHYTR': ['Chymotrypsin', 'FLWY', 'P'],
-               'TRYP+CHYTR': ['Trypsin/Chymotrypsin', 'KRFLWY', 'P']
+               'TRYP+CHYTR': ['Trypsin/Chymotrypsin', 'KRFLWY', 'P'],
+               'Tryp': ['Trypsin', 'KR', 'P'],
+               'LysC': ['lysc', 'K', 'P']
                }
 DEPRECATE_DICT = {
     'offset_rule_mode': 'glyco_search_mode',
@@ -69,8 +71,8 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
             return
 
     if enzyme is not None:
-        if enzyme not in ['TRYP', 'CHYTR', 'TRYP+CHYTR']:
-            print('ERROR: ENZYME {} NOT DEFINED, must be one of: TRYP, CHYTR, TRYP+CHYTR'.format(enzyme))
+        if enzyme not in ENZYME_DATA.keys():
+            print('ERROR: ENZYME {} NOT DEFINED, must be in the enzyme data dict'.format(enzyme))
             return
 
     output_lines = []
@@ -108,9 +110,11 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
             # elif line.startswith('diagnostic_fragments_filter'):
             elif line.startswith('oxonium_intensity_filter'):
                 if activation_type is not None:
-                    if activation_type in ['HCD', 'CID', 'EThcD']:
+                    if activation_type in ['HCD', 'CID']:
                         newline = edit_param_value(line, 0.1)
-                    elif activation_type in ['ETD', 'AIETD']:
+                    elif activation_type in ['EThcD', 'AIETD']:
+                        newline = line      # leave hybrid modes at value set in param file
+                    elif activation_type in ['ETD']:
                         newline = edit_param_value(line, 0)
                     else:
                         newline = edit_param_value(line, 0)

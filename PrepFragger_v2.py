@@ -10,7 +10,6 @@ import shutil
 from dataclasses import dataclass
 import EditParams
 
-FRAGGER_JARNAME = 'msfragger-2.4_20200407_noMerge-noPkCombine.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
@@ -23,7 +22,11 @@ FRAGGER_JARNAME = 'msfragger-2.4_20200407_noMerge-noPkCombine.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'
 
-FRAGGER_MEM = 300
+# FRAGGER_JARNAME = 'msfragger-2.4_20200409_noMerge-intGreater.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4_20200406_master-glyc-merged.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4_20200409_YESmerge-IntGreater.one-jar.jar'
+
+FRAGGER_MEM = 400
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -100,8 +103,12 @@ def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, ma
                 if len(enzymes) > 1:
                     # multi-enzyme run
                     for enzyme in enzymes:
-                        for activation_type in activation_types:
-                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, activation_type=activation_type, enzyme=enzyme, raw_name_append=raw_path_append)
+                        if len(activation_types) > 0:
+                            for activation_type in activation_types:
+                                run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, activation_type=activation_type, enzyme=enzyme, raw_name_append=raw_path_append)
+                                run_containers.append(run_container)
+                        else:
+                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, enzyme=enzyme, raw_name_append=raw_path_append)
                             run_containers.append(run_container)
                 else:
                     # single enzyme run
@@ -268,8 +275,13 @@ def write_multi_phil(shellfile, run_containers, all_subfolders, shell_base):
 
     # if multienzyme, we also need to prep combined philosopher runs with manual parameters, since the individual philosopher shells don't work (b/c pipeline can't handle multienzyme)
     if run_containers[0].enzyme is not '':
-        for index, subfolder in enumerate(all_subfolders):
-            phil_lines = gen_philosopher_lines(shell_base, run_containers[index])
+        for subfolder in all_subfolders:
+            current_container = None
+            for run_container in run_containers:
+                if run_container.subfolder == subfolder:
+                    current_container = run_container
+                    break
+            phil_lines = gen_philosopher_lines(shell_base, current_container)
             # save phil.sh to each subfolder so the multithreaded philosopher shell code above has a phil.sh file to find
             output_shell_path = os.path.join(subfolder, 'phil.sh')
             with open(output_shell_path, 'w', newline='') as phil_shell:
@@ -344,13 +356,17 @@ def check_empty_phil(output):
     :return: updated output
     :rtype: list
     """
-    output.append('found=false\n')
+    output.append('set +x\nfound=false\n')
     output.append('for file in ./*.pepXML; do\n')
     output.append('\tif [ -e $file ]; then\n')
     output.append('\t\tfound=true\n\t\tbreak\n')
     output.append('\tfi\ndone\n')
+    output.append('for file in ./*.pep.xml; do\n')
+    output.append('\tif [ -e $file ]; then\n')
+    output.append('\t\tfound=true\n\t\tbreak\n')
+    output.append('\tfi\ndone\n')
     output.append('if [ $found == false ]; then\n')
-    output.append('\techo "no .pepXML files found. NOT running Philosopher"\n\texit\nfi\n')
+    output.append('\techo "no .pepXML files found. NOT running Philosopher"\n\texit\nfi\nset -x\n')
     return output
 
 
@@ -458,12 +474,12 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
                 if run_container.enzyme is '':
                     fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*{}\n'.format(run_container.raw_format)
                 else:
-                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.enzyme, run_container.raw_format)
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}*{}\n'.format(run_container.enzyme, run_container.raw_format)
             else:
                 if run_container.enzyme is '':
                     fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.activation_type, run_container.raw_format)
                 else:
-                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}_{}{}\n'.format(run_container.enzyme, run_container.activation_type, run_container.raw_format)
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}*_{}*{}\n'.format(run_container.enzyme, run_container.activation_type, run_container.raw_format)
             output.append('start_time=$(date)\n')
             output.append(fragger_cmd)
             output.append('end_time=$(date)\n')

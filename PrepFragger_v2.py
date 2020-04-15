@@ -23,7 +23,7 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'
 
 # FRAGGER_JARNAME = 'msfragger-2.4_20200409_noMerge-intGreater.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4_20200406_master-glyc-merged.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4_20200413_fixCrash-debugRemoved.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4_20200409_YESmerge-IntGreater.one-jar.jar'
 
 FRAGGER_MEM = 400
@@ -162,7 +162,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
 
     else:
         # single enzyme run
-        if activation_type is not '':
+        if not activation_type == '':
             param_path = EditParams.create_param_file(base_param_path, activation_type=activation_type, output_dir=param_subfolder, remove_localize_delta_mass=REMOVE_LOCALIZE_DELTAMASS)
         else:
             param_path = EditParams.create_param_file(base_param_path, activation_type=None, output_dir=param_subfolder, remove_localize_delta_mass=REMOVE_LOCALIZE_DELTAMASS)

@@ -110,14 +110,19 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
             # elif line.startswith('diagnostic_fragments_filter'):
             elif line.startswith('oxonium_intensity_filter'):
                 if activation_type is not None:
-                    if activation_type in ['HCD', 'CID']:
-                        newline = edit_param_value(line, 0.1)
-                    elif activation_type in ['EThcD', 'AIETD']:
-                        newline = line      # leave hybrid modes at value set in param file
-                    elif activation_type in ['ETD']:
-                        newline = edit_param_value(line, 0)
+                    # don't add filtering if it has been turned off
+                    check_line = line.split('#')[0]
+                    if float(check_line.strip().split('=')[1]) == 0:
+                        newline = line
                     else:
-                        newline = edit_param_value(line, 0)
+                        if activation_type in ['HCD', 'CID']:
+                            newline = edit_param_value(line, 0.1)
+                        elif activation_type in ['EThcD', 'AIETD']:
+                            newline = line      # leave hybrid modes at value set in param file
+                        elif activation_type in ['ETD']:
+                            newline = edit_param_value(line, 0)
+                        else:
+                            newline = edit_param_value(line, 0)
             elif line.startswith('labile_mod_no_shifted_by_ions'):
                 if activation_type is not None:
                     # disable labile mod removing b/y ions if in ETD mode, since b/y ions will not be included in the ion series

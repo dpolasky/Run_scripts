@@ -15,11 +15,11 @@ RUN_BOTH = False
 THREADS = 6
 MAX_CHARGE = 6
 # ACTIVATION_LIST = ['HCD', 'AIETD']   # 'ETD', 'HCD', etc. IF NOT USING, SET TO ['']
-# ACTIVATION_LIST = None
+ACTIVATION_LIST = None
 # ACTIVATION_LIST = ['AIETD']
 # ACTIVATION_LIST = ['HCD']
-ACTIVATION_LIST = ['HCD', 'EThcD']
-# ACTIVATION_LIST = ['EThcD']
+# ACTIVATION_LIST = ['HCD', 'EThcD']  # FOLLOW-UP REQUIRED! MSConvert cannot distinguish. Use RemoveScans_mzML.py!
+# ACTIVATION_LIST = ['EThcD']    # FOLLOW-UP REQUIRED! MSConvert cannot distinguish. Use RemoveScans_mzML.py!
 # ACTIVATION_LIST = ['HCD', 'ETD']
 # ACTIVATION_LIST = ['ETD']
 

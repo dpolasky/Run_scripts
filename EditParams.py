@@ -90,23 +90,20 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
             elif line.startswith('fragment_ion_series'):
                 if activation_type is not None:
                     check_line = line.split('#')[0]     # ignore comments
+                    current_series = check_line.split('=')[1].strip().split(',')
                     if activation_type in ['HCD', 'CID']:
-                        if 'b~' in check_line or 'y~' in check_line:
-                            if 'Y' in check_line:
-                                newline = edit_param_value(line, 'b,y,Y,b~,y~')
-                            else:
-                                newline = edit_param_value(line, 'b,y,b~,y~')
-                        elif 'Y' in check_line:
-                            newline = edit_param_value(line, 'b,y,Y')
-                        else:
-                            newline = edit_param_value(line, 'b,y')
+                        remove_ions = ['c', 'z']
                     elif activation_type in ['ETD']:
-                        newline = edit_param_value(line, 'c,z')
+                        remove_ions = ['b', 'y', 'b~', 'y~', 'Y', 'b-18', 'y-18', 'a']
                     elif activation_type in ['AIETD', 'EThcD']:
-                        if 'Y' in check_line:
-                            newline = edit_param_value(line, 'b,y,c,z,Y')
-                        else:
-                            newline = edit_param_value(line, 'b,y,c,z')
+                        remove_ions = []
+                    # removed improper ions then edit the line
+                    for remove_type in remove_ions:
+                        if remove_type in current_series:
+                            current_series.remove(remove_type)
+
+                    newline = edit_param_value(line, ','.join(current_series))
+
             # elif line.startswith('diagnostic_fragments_filter'):
             elif line.startswith('oxonium_intensity_filter'):
                 if activation_type is not None:

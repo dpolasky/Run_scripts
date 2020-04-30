@@ -24,9 +24,9 @@ import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.4_20200409_noMerge-intGreater.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4_20200413_fixCrash-debugRemoved.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4_20200423_labileDeltaMass.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4_20200428_labileDeltaMass-GC.one-jar.jar'
 
-FRAGGER_MEM = 400
+FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -613,6 +613,8 @@ def parse_template(template_file, override_maindir=True):
                 raw_names_list = splits[6].split(';')
                 try:
                     msfragger_jar = splits[7]
+                    if msfragger_jar == '':
+                        msfragger_jar = FRAGGER_JARNAME
                 except IndexError:
                     msfragger_jar = FRAGGER_JARNAME
                 run_container_list = prepare_runs_yml(params_files=[param_path], yml_files=[splits[2]],

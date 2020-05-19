@@ -24,7 +24,7 @@ import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.4_20200409_noMerge-intGreater.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4_20200413_fixCrash-debugRemoved.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4_20200428_labileDeltaMass-GC.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.4_20200504_noShiftby18.one-jar.jar'
 
 FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'

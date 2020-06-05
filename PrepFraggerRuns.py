@@ -103,6 +103,20 @@ def update_folder_linux(folder_name):
     return linux_name
 
 
+def update_folder_windows(folder_name):
+    """
+    helper to auto update linux directories to windows (my computer)
+    :param folder_name: path to update
+    :return: updated path
+    """
+    if folder_name.startswith('/storage'):
+        win_name = folder_name.replace('/storage', 'Z:')
+        win_name = win_name.replace('/', '\\')
+    else:
+        win_name = folder_name
+    return win_name
+
+
 def gen_single_shell(params_file, db_file, subfolder, shell_template, individ_folder=None, fragger_jar=None,
                      fragger_mem=None, raw_fmt=None, write_output=True, yml_file=None, raw_dir=None):
     """

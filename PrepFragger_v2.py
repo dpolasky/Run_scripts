@@ -7,6 +7,7 @@ import tkinter
 from tkinter import filedialog
 import os
 import shutil
+import subprocess
 from dataclasses import dataclass
 import EditParams
 
@@ -24,11 +25,14 @@ import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.4_20200409_noMerge-intGreater.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4_20200413_fixCrash-debugRemoved.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.4_20200504_noShiftby18.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4_20200504_noShiftby18.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-2.5-rc5_20200525.one-jar.jar'
 
-FRAGGER_MEM = 200
+FRAGGER_MEM = 400
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
+
+QUANT_COPY_ANNOTATION_FILE = True
 
 # OVERRIDE_MAINDIR = False
 OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
@@ -69,7 +73,7 @@ class RunContainer(object):
     split_dbs: int      # for splitting database if > 0
 
 
-def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, main_dir, activation_types, enzymes, raw_names_list, fragger_jar):
+def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, main_dir, activation_types, enzymes, raw_names_list, fragger_jar, annotation_path):
     """
     Generates subfolders for each Fragger .params file found in the provided outer directory. Uses
     params file name as a the subfolder name
@@ -106,24 +110,24 @@ def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, ma
                     for enzyme in enzymes:
                         if len(activation_types) > 0:
                             for activation_type in activation_types:
-                                run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, enzyme=enzyme, raw_name_append=raw_path_append)
+                                run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, enzyme=enzyme, raw_name_append=raw_path_append, annotation_path=annotation_path)
                                 run_containers.append(run_container)
                         else:
-                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, enzyme=enzyme, raw_name_append=raw_path_append)
+                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, enzyme=enzyme, raw_name_append=raw_path_append, annotation_path=annotation_path)
                             run_containers.append(run_container)
                 else:
                     # single enzyme run
                     if len(activation_types) > 0:
                         for activation_type in activation_types:
-                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, raw_name_append=raw_path_append)
+                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, raw_name_append=raw_path_append, annotation_path=annotation_path)
                             run_containers.append(run_container)
                     else:
-                        run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, raw_name_append=raw_path_append)
+                        run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, raw_name_append=raw_path_append, annotation_path=annotation_path)
                         run_containers.append(run_container)
     return run_containers
 
 
-def generate_single_run(base_param_path, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=None, enzyme=None, raw_name_append=''):
+def generate_single_run(base_param_path, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=None, enzyme=None, raw_name_append='', annotation_path=''):
     """
     Generate a RunContainer from the provided information and return it
     :param base_param_path: .params file for Fragger (path)
@@ -183,6 +187,9 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         yml_output_path = os.path.join(param_subfolder, 'phil_config.yml')
         shutil.copy(yml_file, yml_output_path)
         edit_yml(yml_output_path, db_file, disable_peptide_prophet=True)
+        if annotation_path is not '':
+            shutil.copy(annotation_path, os.path.join(enzyme_subfolder, os.path.basename(annotation_path)))
+        symlink_raw_files(enzyme_subfolder, raw_path, RAW_FORMAT, activation_type, enzyme)
         yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
         run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path,
                                      yml_final_linux_path, fragger_jar, FRAGGER_MEM, RAW_FORMAT, activation_type,
@@ -194,6 +201,10 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         yml_output_path = os.path.join(param_subfolder, 'phil_config.yml')
         shutil.copy(yml_file, yml_output_path)
         edit_yml(yml_output_path, db_file)
+        if annotation_path is not '':
+            shutil.copy(annotation_path, os.path.join(param_subfolder, os.path.basename(annotation_path)))
+        # symlink raw files for downstream tools
+        symlink_raw_files(param_subfolder, raw_path, RAW_FORMAT, activation_type, '')
         yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
 
         # generate single shell for individual runs (if desired)
@@ -201,6 +212,58 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
                                      fragger_jar, FRAGGER_MEM, RAW_FORMAT, activation_type, '', '', '', SPLIT_DBS)
         gen_single_shell_activation(run_container, write_output=True, run_philosopher=True)
     return run_container
+
+
+def symlink_raw_files(param_subfolder, raw_path, raw_format, activation_type, enzyme):
+    """
+    Create symbolic links for all specified raw files in the raw path to the results folder for downstream
+    tools. Supports only creating for particular activation type/enzyme as needed
+    :param param_subfolder: folder path in which to link
+    :type param_subfolder: str
+    :param raw_path: path to folder of raw data files (linux path)
+    :type raw_path: str
+    :param activation_type: str or ''
+    :type activation_type: str
+    :param raw_format: file extension (e.g. '.mzML')
+    :type raw_format: str
+    :param enzyme: str or ''
+    :type enzyme: str
+    :return: void
+    :rtype:
+    """
+    # Get all raw files
+    if enzyme is not '':
+        if activation_type is not '':
+            contain_strs = ['_{}'.format(activation_type), '_{}'.format(enzyme), raw_format]
+        else:
+            contain_strs = ['_{}'.format(enzyme), raw_format]
+    else:
+        if activation_type is not '':
+            contain_strs = ['_{}'.format(activation_type), raw_format]
+        else:
+            contain_strs = [raw_format]
+
+    windows_raw_path = PrepFraggerRuns.update_folder_windows(raw_path)
+    raw_files = [os.path.join(windows_raw_path, x) for x in os.listdir(windows_raw_path)]
+    filt_raws = []
+    # filter by activation/enzyme rules
+    for raw_file in raw_files:
+        skip = False
+        for must_have_str in contain_strs:
+            if must_have_str not in raw_file:
+                skip = True
+        if not skip:
+            filt_raws.append(raw_file)
+
+    # create symlinks
+    for raw_filepath in filt_raws:
+        new_path = os.path.join(param_subfolder, os.path.basename(raw_filepath))
+        # NOTE: REQUIRES ADMIN PRIVILEGES TO SUCCEED
+        try:
+            os.symlink(raw_filepath, new_path)
+        except FileExistsError:
+            # rerunning on prev directory - ignore
+            continue
 
 
 def gen_multilevel_shell(run_containers, main_dir, run_folders=None):
@@ -606,6 +669,16 @@ def parse_template(template_file, override_maindir=True):
                 # param_path = os.path.join(current_maindir, splits[0])
                 if not param_path.endswith('.params'):
                     param_path += '.params'
+                if QUANT_COPY_ANNOTATION_FILE:
+                    annotation_files = find_specific_files(current_maindir, ['annotation.txt'])
+                    if len(annotation_files) == 1:
+                        annotation_file = annotation_files[0]
+                    else:
+                        print('WARNING: annotation file requested but {} found, skipping'.format(len(annotation_files)))
+                        annotation_file = ''
+                else:
+                    annotation_file = ''
+
                 activation_types = splits[1].split(';')
                 enzymes = splits[5].split(';')
                 # raw path(s)
@@ -620,9 +693,41 @@ def parse_template(template_file, override_maindir=True):
                 run_container_list = prepare_runs_yml(params_files=[param_path], yml_files=[splits[2]],
                                                       raw_path_files=raw_path_list, shell_template=splits[3],
                                                       main_dir=current_maindir, activation_types=activation_types,
-                                                      enzymes=enzymes, raw_names_list=raw_names_list, fragger_jar=msfragger_jar)
+                                                      enzymes=enzymes, raw_names_list=raw_names_list, fragger_jar=msfragger_jar,
+                                                      annotation_path=annotation_file)
                 run_list.extend(run_container_list)
     return run_list, return_maindir, run_folders
+
+
+def find_specific_files(starting_dir, endswith=None):
+    """
+    From starting dir, keep jumping up directories until finding file(s) ending with '_byonic.csv'. Returns those
+    files
+    :param starting_dir: dir to start (path)
+    :type starting_dir: str
+    :param endswith: list of file types to find
+    :type endswith: list
+    :return: list of filepaths
+    """
+    if endswith is None:
+        endswith = ['byonic.csv']
+
+    files = []
+    for filetype in endswith:
+        current_files = [os.path.join(starting_dir, x) for x in os.listdir(starting_dir) if x.lower().endswith(filetype.lower())]
+        files.extend(current_files)
+    jumps = 0
+    while len(files) == 0:
+        # jump up second directory if none found
+        starting_dir = os.path.dirname(starting_dir)
+        for filetype in endswith:
+            current_files = [os.path.join(starting_dir, x) for x in os.listdir(starting_dir) if x.lower().endswith(filetype.lower())]
+            files.extend(current_files)
+        jumps += 1
+        if jumps > 5:
+            print('no files of type {} found!'.format(endswith))
+            break
+    return files
 
 
 if __name__ == '__main__':

@@ -33,6 +33,8 @@ RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
 QUANT_COPY_ANNOTATION_FILE = True
+if QUANT_COPY_ANNOTATION_FILE:
+    print('Dont forget to add mzML files to path using link_mzml shell script before phil runs quant!')
 
 # OVERRIDE_MAINDIR = False
 OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
@@ -189,7 +191,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         edit_yml(yml_output_path, db_file, disable_peptide_prophet=True)
         if annotation_path is not '':
             shutil.copy(annotation_path, os.path.join(enzyme_subfolder, os.path.basename(annotation_path)))
-        symlink_raw_files(enzyme_subfolder, raw_path, RAW_FORMAT, activation_type, enzyme)
+        # symlink_raw_files(enzyme_subfolder, raw_path, RAW_FORMAT, activation_type, enzyme)
         yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
         run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path,
                                      yml_final_linux_path, fragger_jar, FRAGGER_MEM, RAW_FORMAT, activation_type,
@@ -203,8 +205,8 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         edit_yml(yml_output_path, db_file)
         if annotation_path is not '':
             shutil.copy(annotation_path, os.path.join(param_subfolder, os.path.basename(annotation_path)))
-        # symlink raw files for downstream tools
-        symlink_raw_files(param_subfolder, raw_path, RAW_FORMAT, activation_type, '')
+        # symlink raw files for downstream tools - doesn't work if running philosopher on linux because these are windows symlinks...
+        # symlink_raw_files(param_subfolder, raw_path, RAW_FORMAT, activation_type, '')
         yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
 
         # generate single shell for individual runs (if desired)
@@ -218,6 +220,9 @@ def symlink_raw_files(param_subfolder, raw_path, raw_format, activation_type, en
     """
     Create symbolic links for all specified raw files in the raw path to the results folder for downstream
     tools. Supports only creating for particular activation type/enzyme as needed
+    ************
+    DEPRECATED: doesn't work if running philosopher on linux because these are windows symlinks...
+    ************
     :param param_subfolder: folder path in which to link
     :type param_subfolder: str
     :param raw_path: path to folder of raw data files (linux path)

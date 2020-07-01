@@ -13,7 +13,8 @@ ENZYME_DATA = {'TRYP': ['Trypsin', 'KR', 'P'],
                'CHYTR': ['Chymotrypsin', 'FLWY', 'P'],
                'TRYP+CHYTR': ['Trypsin/Chymotrypsin', 'KRFLWY', 'P'],
                'Tryp': ['Trypsin', 'KR', 'P'],
-               'LysC': ['lysc', 'K', 'P']
+               'LysC': ['lysc', 'K', 'P'],
+               'ALP': ['']
                }
 DEPRECATE_DICT = {
     'offset_rule_mode': 'glyco_search_mode',
@@ -95,8 +96,8 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
                         remove_ions = ['c', 'z']
                     elif activation_type in ['ETD']:
                         remove_ions = ['b', 'y', 'b~', 'y~', 'Y', 'b-18', 'y-18', 'a']
-                    elif activation_type in ['AIETD', 'EThcD']:
-                        remove_ions = []
+                    elif activation_type in ['AIETD', 'EThcD', 'AI-ETD']:
+                        remove_ions = ['b~', 'y~']
                     # removed improper ions then edit the line
                     for remove_type in remove_ions:
                         if remove_type in current_series:

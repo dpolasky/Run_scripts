@@ -16,33 +16,100 @@ ENZYME_DATA = {'TRYP': ['Trypsin', 'KR', 'P'],
                'LysC': ['lysc', 'K', 'P'],
                'ALP': ['']
                }
-DEPRECATE_DICT = {
-    'offset_rule_mode': 'glyco_search_mode',
-    # 'glyco_search_mode': 'offset_rule_mode',
-    # 'Y_type_masses': '',
-    # 'diagnostic_fragments': '',
-    'diagnostic_fragments_filter': 'oxonium_intensity_filter'
+# DEPRECATE_DICT = {
+#     'offset_rule_mode': 'labile_search_mode',
+#     'glyco_search_mode': 'labile_search_mode',
+#     # 'Y_type_masses': '',
+#     # 'diagnostic_fragments': '',
+#     # 'diagnostic_fragments_filter': 'oxonium_intensity_filter',
+#     'oxonium_intensity_filter': 'diagnostic_fragments_filter'
+#
+# }
+
+DEPRECATED_PARAMS = {
+    'offset_rule_mode': 'labile_search_mode',
+    'glyco_search_mode': 'labile_search_mode',
+    'oxonium_ions': 'diagnostic_fragments',
+    'diagnostic_fragments_filter': 'diagnostic_intensity_filter',
+    'oxonium_intensity_filter': 'diagnostic_intensity_filter',
+}
+DEPRECATED_VALUES = {
+    'NGlycan': 'nglycan',
+    'OGlycan': 'labile',
+    'OGlycan ST': 'labile',
+    'Specific': 'labile',
+    'None': 'off'
 }
 
 
-def deprecated_param_check(line, deprecation_dict):
+def deprecated_param_check(line, deprecated_key_dict, deprecated_value_dict):
     """
-    Check for lines that have old/deprecated parameters and fix them using the known dict
-    :param line: param file line to read
+    Check for lines that have old/deprecated parameters and fix them using the known dict.
+    NOTE: saves the old line too, because older test jars may still need it
+    :param line: string (line) of param file to consider.
     :type line: str
-    :param deprecation_dict: dict of old line: new line to use for fixing
-    :type deprecation_dict: dict
-    :return: updated line
-    :rtype: str
+    :param deprecated_key_dict: dict of deprecated param: new param
+    :type deprecated_key_dict: dict
+    :param deprecated_value_dict: dict of deprecated value: new value
+    :type deprecated_value_dict: dict
+    :return: list of lines (old line, new line)
+    :rtype: list
     """
+    # ignore comments
+    if line.startswith('#'):
+        return [line]
+
     splits = line.split('=')
     old_key = splits[0].strip()
-    if old_key in deprecation_dict.keys():
+    return_lines = []
+    try:
+        old_value = splits[1].strip()
+        if '#' in old_value:
+            old_value = old_value.split('#')[0].strip()     # ignore comments when finding values
+    except IndexError:
+        # retain blank lines and text explanation lines (no params to edit)
+        return [line]
+    if old_key in deprecated_key_dict:
         # this parameter name has been deprecated. Replace it with the new version
-        newline = '{} ={}'.format(deprecation_dict[old_key], splits[1])     # splits[1] still has \n at the end
-        return newline
+        if old_value in deprecated_value_dict:
+            newline = '{} = {}\n'.format(deprecated_key_dict[old_key], deprecated_value_dict[old_value])
+            return_lines.append(line)
+            return_lines.append(newline)
+        else:
+            # retain original value
+            newline = '{} ={}'.format(deprecated_key_dict[old_key], splits[1])     # splits[1] still has \n at the end
+            return_lines.append(line)
+            return_lines.append(newline)
     else:
-        return line
+        if old_value in deprecated_value_dict:
+            newline = '{}= {}\n'.format(splits[0], deprecated_value_dict[old_value])
+            return_lines.append(line)
+            return_lines.append(newline)
+        else:
+            # no change
+            return_lines.append(line)
+
+    return return_lines
+
+
+# def deprecated_param_check(line, deprecation_dict):
+#     """
+#     Check for lines that have old/deprecated parameters and fix them using the known dict
+#     :param line: param file line to read
+#     :type line: str
+#     :param deprecation_dict: dict of old line: new line to use for fixing
+#     :type deprecation_dict: dict
+#     :return: updated line
+#     :rtype: str
+#     """
+#     splits = line.split('=')
+#     old_key = splits[0].strip()
+#     if old_key in deprecation_dict.keys():
+#         # this parameter name has been deprecated. Replace it with the new version
+#         newline = '{} ={}'.format(deprecation_dict[old_key], splits[1])     # splits[1] still has \n at the end
+#         return newline
+#     else:
+#         return line
 
 
 def edit_param_value(line, new_value):
@@ -78,83 +145,84 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
 
     output_lines = []
     with open(base_param_file, 'r') as infile:
-        for line in list(infile):
+        for unchecked_line in list(infile):
             # check/replace deprecated params
-            line = deprecated_param_check(line, DEPRECATE_DICT)
-            newline = None
-            if line.startswith('remove_precursor_peak'):
-                if activation_type is not None:
-                    if activation_type in ['HCD', 'CID']:
-                        newline = edit_param_value(line, 1)
-                    else:
-                        newline = edit_param_value(line, 2)
-            elif line.startswith('fragment_ion_series'):
-                if activation_type is not None:
-                    check_line = line.split('#')[0]     # ignore comments
-                    current_series = check_line.split('=')[1].strip().split(',')
-                    if activation_type in ['HCD', 'CID']:
-                        remove_ions = ['c', 'z']
-                    elif activation_type in ['ETD']:
-                        remove_ions = ['b', 'y', 'b~', 'y~', 'Y', 'b-18', 'y-18', 'a']
-                    elif activation_type in ['AIETD', 'EThcD', 'AI-ETD']:
-                        remove_ions = ['b~', 'y~']
-                    # removed improper ions then edit the line
-                    for remove_type in remove_ions:
-                        if remove_type in current_series:
-                            current_series.remove(remove_type)
-
-                    newline = edit_param_value(line, ','.join(current_series))
-
-            # elif line.startswith('diagnostic_fragments_filter'):
-            elif line.startswith('oxonium_intensity_filter'):
-                if activation_type is not None:
-                    # don't add filtering if it has been turned off
-                    check_line = line.split('#')[0]
-                    if float(check_line.strip().split('=')[1]) == 0:
-                        newline = line
-                    else:
+            checked_lines = deprecated_param_check(unchecked_line, DEPRECATED_PARAMS, DEPRECATED_VALUES)
+            for line in checked_lines:
+                newline = None
+                if line.startswith('remove_precursor_peak'):
+                    if activation_type is not None:
                         if activation_type in ['HCD', 'CID']:
-                            newline = edit_param_value(line, 0.1)
-                        elif activation_type in ['EThcD', 'AIETD']:
-                            newline = line      # leave hybrid modes at value set in param file
+                            newline = edit_param_value(line, 1)
+                        else:
+                            newline = edit_param_value(line, 2)
+                elif line.startswith('fragment_ion_series'):
+                    if activation_type is not None:
+                        check_line = line.split('#')[0]     # ignore comments
+                        current_series = check_line.split('=')[1].strip().split(',')
+                        if activation_type in ['HCD', 'CID']:
+                            remove_ions = ['c', 'z']
                         elif activation_type in ['ETD']:
+                            remove_ions = ['b', 'y', 'b~', 'y~', 'Y', 'b-18', 'y-18', 'a']
+                        elif activation_type in ['AIETD', 'EThcD', 'AI-ETD']:
+                            remove_ions = ['b~', 'y~']
+                        # removed improper ions then edit the line
+                        for remove_type in remove_ions:
+                            if remove_type in current_series:
+                                current_series.remove(remove_type)
+
+                        newline = edit_param_value(line, ','.join(current_series))
+
+                # elif line.startswith('diagnostic_fragments_filter'):
+                elif line.startswith('oxonium_intensity_filter'):
+                    if activation_type is not None:
+                        # don't add filtering if it has been turned off
+                        check_line = line.split('#')[0]
+                        if float(check_line.strip().split('=')[1]) == 0:
+                            newline = line
+                        else:
+                            if activation_type in ['HCD', 'CID']:
+                                newline = edit_param_value(line, 0.1)
+                            elif activation_type in ['EThcD', 'AIETD']:
+                                newline = line      # leave hybrid modes at value set in param file
+                            elif activation_type in ['ETD']:
+                                newline = edit_param_value(line, 0)
+                            else:
+                                newline = edit_param_value(line, 0)
+                elif line.startswith('labile_mod_no_shifted_by_ions'):
+                    if activation_type is not None:
+                        # disable labile mod removing b/y ions if in ETD mode, since b/y ions will not be included in the ion series
+                        if activation_type in ['ETD']:
                             newline = edit_param_value(line, 0)
                         else:
-                            newline = edit_param_value(line, 0)
-            elif line.startswith('labile_mod_no_shifted_by_ions'):
-                if activation_type is not None:
-                    # disable labile mod removing b/y ions if in ETD mode, since b/y ions will not be included in the ion series
-                    if activation_type in ['ETD']:
-                        newline = edit_param_value(line, 0)
-                    else:
-                        # don't enable by default, as we don't always want to use this for HCD/etc searches. (Need to remember to set/unset as needed in base param file)
-                        newline = line
-            elif line.startswith('localize_delta_mass'):
-                if remove_localize_delta_mass:
-                    # disable shifted ions for CID/HCD glyco searches
-                    if activation_type is not None:
-                        if activation_type in ['CID', 'HCD']:
-                            newline = edit_param_value(line, 0)
+                            # don't enable by default, as we don't always want to use this for HCD/etc searches. (Need to remember to set/unset as needed in base param file)
+                            newline = line
+                elif line.startswith('localize_delta_mass'):
+                    if remove_localize_delta_mass:
+                        # disable shifted ions for CID/HCD glyco searches
+                        if activation_type is not None:
+                            if activation_type in ['CID', 'HCD']:
+                                newline = edit_param_value(line, 0)
 
-            # enzyme params
-            elif line.startswith('search_enzyme_name'):
-                if enzyme is not None:
-                    newline = edit_param_value(line, ENZYME_DATA[enzyme][0])
-            elif line.startswith('search_enzyme_cutafter'):
-                if enzyme is not None:
-                    newline = edit_param_value(line, ENZYME_DATA[enzyme][1])
-            elif line.startswith('search_enzyme_butnotafter'):
-                if enzyme is not None:
-                    newline = edit_param_value(line, ENZYME_DATA[enzyme][2])
-            elif line.startswith('database_name'):
-                if enzyme is not None:
-                    newline = 'database_name = ../{}\n'.format(line.split('=')[1].strip())
-            else:
-                newline = line
+                # enzyme params
+                elif line.startswith('search_enzyme_name'):
+                    if enzyme is not None:
+                        newline = edit_param_value(line, ENZYME_DATA[enzyme][0])
+                elif line.startswith('search_enzyme_cutafter'):
+                    if enzyme is not None:
+                        newline = edit_param_value(line, ENZYME_DATA[enzyme][1])
+                elif line.startswith('search_enzyme_butnotafter'):
+                    if enzyme is not None:
+                        newline = edit_param_value(line, ENZYME_DATA[enzyme][2])
+                elif line.startswith('database_name'):
+                    if enzyme is not None:
+                        newline = 'database_name = ../{}\n'.format(line.split('=')[1].strip())
+                else:
+                    newline = line
 
-            if newline is None:
-                newline = line
-            output_lines.append(newline)
+                if newline is None:
+                    newline = line
+                output_lines.append(newline)
 
     # save updated params to new file with activation appended
     if activation_type is not None:

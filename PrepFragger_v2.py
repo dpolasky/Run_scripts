@@ -25,33 +25,43 @@ import EditParams
 
 # FRAGGER_JARNAME = 'msfragger-2.4_20200409_noMerge-intGreater.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4_20200413_fixCrash-debugRemoved.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.4_20200504_noShiftby18.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-2.5-rc5_20200525.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1-rc3_20200617_sumIsos.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1-rc3_20200617.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1-rc4_20200713_fixIsoCorrMaxMass.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.5-rc5_20200525.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.0.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1-rc9_20200811_maxIonsInfo.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1-rc9_20200811c_paramFix3-real.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-3.1-rc10_20200819.one-jar.jar'
 
-FRAGGER_MEM = 400
+FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
-QUANT_COPY_ANNOTATION_FILE = True
+# QUANT_COPY_ANNOTATION_FILE = True
+QUANT_COPY_ANNOTATION_FILE = False
 if QUANT_COPY_ANNOTATION_FILE:
     print('Dont forget to add mzML files to path using link_mzml shell script before phil runs quant!')
 
-# OVERRIDE_MAINDIR = False
-OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
+# JAVA_TO_USE = 'java'        # use default java
+JAVA_TO_USE = '/storage/dpolasky/tools/bin/jdk-14.0.2/bin/java'        # java 14 = fast
 
 SERIAL_PHILOSOPHER = False
 # SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
 
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
-# RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (should be obvious, but can be forgotten...)
+# RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (search is still run in raw dir, so will overwrite)
 
 # REMOVE_LOCALIZE_DELTAMASS = True
 REMOVE_LOCALIZE_DELTAMASS = False   # default
 
 SPLIT_DBS = 0
-# SPLIT_DBS = 7       # set > 0 if using split database
+# SPLIT_DBS = 2       # set > 0 if using split database
 SPLIT_PYTHON_PATH = '/storage/teog/anaconda3/bin/python3'  # linux path since this just gets written directly to the shell script
 SPLIT_DB_SCRIPT = '/storage/dpolasky/tools/msfragger_pep_split_20191106.py'
+
+# OVERRIDE_MAINDIR = False
+OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
 
 
 @dataclass
@@ -536,10 +546,10 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
             # main Fragger command
             if run_container.split_dbs > 0:
                 # using split DB, so prepend the python script before the fragger command
-                fragger_cmd = '{} {} {} "java -Xmx{}G -jar" '.format(SPLIT_PYTHON_PATH, SPLIT_DB_SCRIPT, run_container.split_dbs, run_container.fragger_mem)
+                fragger_cmd = '{} {} {} "{} -Xmx{}G -jar" '.format(SPLIT_PYTHON_PATH, SPLIT_DB_SCRIPT, run_container.split_dbs, JAVA_TO_USE, run_container.fragger_mem)
             else:
                 # not using split DB
-                fragger_cmd = 'java -Xmx{}G -jar '.format(run_container.fragger_mem)
+                fragger_cmd = '{} -Xmx{}G -jar '.format(JAVA_TO_USE, run_container.fragger_mem)
             if run_container.activation_type is '':
                 if run_container.enzyme is '':
                     fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*{}\n'.format(run_container.raw_format)

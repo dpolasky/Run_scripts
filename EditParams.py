@@ -32,6 +32,7 @@ DEPRECATED_PARAMS = {
     'oxonium_ions': 'diagnostic_fragments',
     'diagnostic_fragments_filter': 'diagnostic_intensity_filter',
     'oxonium_intensity_filter': 'diagnostic_intensity_filter',
+    'deltamass_allowed_residues': 'restrict_deltamass_to'
 }
 DEPRECATED_VALUES = {
     'NGlycan': 'nglycan',

@@ -7,12 +7,14 @@ from tkinter import filedialog
 import os
 import subprocess
 import multiprocessing
+import time
 
 tool_path = r"C:\Users\dpolasky\AppData\Local\Apps\ProteoWizard 3.0.19296.ebe17a86f 64-bit\msconvert.exe"
 out_dir = ''
-DEISOTOPE = False
+DEISOTOPE = True
+DEISO_TIME_TEST = False
 RUN_BOTH = False
-THREADS = 6
+THREADS = 8
 MAX_CHARGE = 6
 # ACTIVATION_LIST = ['HCD', 'AIETD']   # 'ETD', 'HCD', etc. IF NOT USING, SET TO ['']
 ACTIVATION_LIST = None
@@ -24,7 +26,7 @@ ACTIVATION_LIST = None
 # ACTIVATION_LIST = ['ETD']
 
 
-def format_commands(filename, deisotope, output_dir, activation_method=''):
+def format_commands(filename, deisotope, output_dir, activation_method=None, deiso_time_test=False, deiso_poisson=True):
     """
     Generate a formatted string for running MSConvert
     :param filename:
@@ -35,10 +37,16 @@ def format_commands(filename, deisotope, output_dir, activation_method=''):
     """
     output_path = os.path.join(os.path.dirname(filename), output_dir)
     # output_file = os.path.join(output_path, os.path.basename(filename))
-    cmd_str = '{} {} --mzML -z --64 -o {}'.format(tool_path, filename, output_path)
-    cmd_str += ' --filter "peakPicking true 1-"'
-    # remove 0 samples if converting from profile data (helps reduce file size a lot)
-    cmd_str += ' --filter "zeroSamples removeExtra 1-"'
+    cmd_str = '{} {} --64 -o {}'.format(tool_path, filename, output_path)
+    if not deiso_time_test:
+        cmd_str += ' -z --filter "peakPicking true 1-"'
+        # remove 0 samples if converting from profile data (helps reduce file size a lot)
+        cmd_str += ' --filter "zeroSamples removeExtra 1-"'
+    else:
+        cmd_str += ' -v --mgf'
+        # cmd_str += ' --filter "peakPicking true 1-"'
+
+        # cmd_str += ' --filter msLevel 2-'
 
     # activation filter
     if activation_method is not None:
@@ -49,8 +57,10 @@ def format_commands(filename, deisotope, output_dir, activation_method=''):
         cmd_str += ' --filter "activation {}"'.format(actual_activation)
 
     if deisotope:
-        cmd_str += ' --filter "MS2Deisotope Poisson minCharge=1 maxCharge={}"'.format(MAX_CHARGE)
-        # cmd_str += ' --filter "MS2Deisotope hi_res"'
+        if deiso_poisson:
+            cmd_str += ' --filter "MS2Deisotope Poisson minCharge=1 maxCharge={}"'.format(MAX_CHARGE)
+        else:
+            cmd_str += ' --filter "MS2Deisotope hi_res"'
 
     print(cmd_str)
     return cmd_str
@@ -62,7 +72,10 @@ def run_cmd(command_str):
     :param command_str: string command
     :return: void
     """
+    start = time.time()
     subprocess.run(command_str)
+    end = time.time() - start
+    print('time {:.1f} s for {}'.format(end, command_str))
     return command_str
 
 
@@ -102,8 +115,6 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
         activation_types = [None]
 
     for activation in activation_types:
-        pool = multiprocessing.Pool(processes=THREADS)
-
         # create output directory
         if DEISOTOPE:
             if activation is None:
@@ -123,17 +134,24 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
             cmd = format_commands(file, deisotope=deisotope, activation_method=activation, output_dir=outputdir)
             commands.append(cmd)
 
-        results = []
-        for cmd in commands:
-            pool_result = pool.apply_async(run_cmd, args=[cmd])
-            results.append(pool_result)
+        if THREADS > 1:
+            pool = multiprocessing.Pool(processes=THREADS)
 
-        results_check = check_results(pool, results, commands)
-        results_check2 = check_results(pool, results_check, commands)
+            results = []
+            for cmd in commands:
+                pool_result = pool.apply_async(run_cmd, args=[cmd])
+                results.append(pool_result)
 
-        # pool.join()
-        pool.terminate()
-        pool.close()
+            results_check = check_results(pool, results, commands)
+            results_check2 = check_results(pool, results_check, commands)
+
+            # pool.join()
+            pool.terminate()
+            pool.close()
+        else:
+            # single thread
+            for cmd in commands:
+                run_cmd(cmd)
 
         # kill any remaining MSConvert processes because we're definitely done and having them hang around can cause problems...
         # kill_msconvert_procs()
@@ -188,7 +206,7 @@ if __name__ == '__main__':
     root = tkinter.Tk()
     root.withdraw()
 
-    files = filedialog.askopenfilenames(filetypes=[('Raw', '.raw')])
+    files = filedialog.askopenfilenames(filetypes=[('Raw', '.raw'), ('mzML', '.mzml')])
     files = [os.path.join(os.path.dirname(x), x) for x in files]
 
     run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)

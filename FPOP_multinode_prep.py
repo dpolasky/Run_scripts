@@ -35,8 +35,8 @@ def edit_shell_database(shell_path, database_name):
                 line = 'fastaPath="{}"\n'.format(database_name)
             output.append(line)
 
-    # write output
-    with open(shell_path, 'w') as writefile:
+    # write output (linux EOL)
+    with open(shell_path, 'w', newline='') as writefile:
         for line in output:
             writefile.write(line)
 
@@ -77,6 +77,7 @@ def create_multinode_folder(param_files):
             continue
         node_name = [x for x in param_name.split('-') if 'node' in x][0]
         copy_path = os.path.join(common_folder_path, '{}_interact.pep.xml'.format(node_name))
+        print('copying file {}'.format(copy_path))
         shutil.copy(interact_file, copy_path)
 
     # copy and edit shell file for running the final analysis

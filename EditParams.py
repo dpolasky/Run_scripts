@@ -135,7 +135,7 @@ def create_param_file(base_param_file, output_dir, activation_type=None, enzyme=
     """
     # check activation types
     if activation_type is not None:
-        if activation_type not in ['HCD', 'CID', 'AIETD', 'ETD', 'EThcD']:
+        if activation_type not in ['HCD', 'CID', 'AIETD', 'ETD', 'EThcD', 'AI-ETD']:
             print('ERROR: ACTIVATION TYPE {} NOT DEFINED'.format(activation_type))
             return
 

@@ -171,8 +171,8 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
     output_files = [os.path.join(maindir, x) for x in os.listdir(maindir) if x.endswith('.mzML')]
     print('checking {} file outputs...'.format(len(output_files)))
     bad_files = check_converted_files(output_files)
-    for file in bad_files:
-        print('Bad: {}'.format(file))
+    # for file in bad_files:
+    #     print('Bad: {}'.format(file))
     if len(bad_files) == 0:
         print('All files extracted successfully')
 
@@ -185,11 +185,13 @@ def check_converted_files(file_list):
     :return: list of bad files
     """
     bad_files = []
-    for file in file_list:
+    for index, file in enumerate(file_list):
+        print('checking file {} of {}'.format(index + 1, len(file_list)))
         with open(file, 'r') as readfile:
             last_line = list(readfile)[-1]
             if '</indexedmzML' not in last_line:
                 bad_files.append(file)
+                print('Bad: {}'.format(file))
     return bad_files
 
 
@@ -209,7 +211,8 @@ if __name__ == '__main__':
     files = filedialog.askopenfilenames(filetypes=[('Raw', '.raw'), ('mzML', '.mzml')])
     files = [os.path.join(os.path.dirname(x), x) for x in files]
 
-    run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)
+    # run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)
+    check_converted_files(files)
 
     # main_dir = os.path.dirname(files[0])
     # output_files = [os.path.join(main_dir, x) for x in os.listdir(main_dir) if x.endswith('.mzML')]

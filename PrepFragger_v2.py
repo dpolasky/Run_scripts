@@ -24,17 +24,20 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'
 
 # FRAGGER_JARNAME = 'msfragger-2.4_20200409_noMerge-intGreater.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.4_20200413_fixCrash-debugRemoved.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1-rc3_20200617_sumIsos.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1-rc3_20200617.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1-rc4_20200713_fixIsoCorrMaxMass.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.5-rc5_20200525.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.0.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1-rc9_20200811_maxIonsInfo.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1-rc6_20200728.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1-rc9_20200811c_paramFix3-real.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-3.1-rc10_20200819.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1-rc27_20200919.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'  # deiso paper
+# FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'   # Sciex deiso paper
+# FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
 
-FRAGGER_MEM = 200
+FRAGGER_MEM = 450
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -401,7 +404,7 @@ def gen_philosopher_lines(shell_template_lines, run_container: RunContainer, ser
                     output.append('$philosopherPath report --decoys\n')
             else:
                 output.append(line)
-        if line.startswith('analysisName') or line.startswith('cp ') or line.startswith('decoy'):
+        if line.startswith('analysisName') or line.startswith('cp ') or line.startswith('mv ') or line.startswith('decoy'):
             output.append(line)
     return output
 
@@ -572,7 +575,7 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
             if run_philosopher:
                 output.append(line)
                 phil_output.append(line)
-        elif line.startswith('analysisName') or line.startswith('cp '):
+        elif line.startswith('analysisName') or line.startswith('cp ' or line.startswith('mv ')):
             if run_philosopher:
                 output.append(line)
                 phil_output.append(line)
@@ -586,9 +589,9 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
             output.append(line)
 
     if run_container.enzyme is not '':
-        # add peptide prophet run and copying out of subfolder
-        output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\ncp ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
-        phil_output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\ncp ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
+        # add peptide prophet run and moving out of subfolder
+        output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
+        phil_output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
 
     if write_output:
         with open(new_shell_name, 'w', newline='') as shellfile:

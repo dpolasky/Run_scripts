@@ -5,6 +5,7 @@ alternative method to prep fragger runs, using philosopher pipeline and easier h
 import PrepFraggerRuns
 import tkinter
 from tkinter import filedialog
+import tkfilebrowser
 import os
 import shutil
 import subprocess
@@ -34,10 +35,14 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-3.1-rc27_20200919.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'  # deiso paper
 # FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'   # Sciex deiso paper
+FRAGGER_JARNAME = 'msfragger-3.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
 
-FRAGGER_MEM = 450
+USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
+# USE_BATCH = False
+
+FRAGGER_MEM = 400
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -641,6 +646,38 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
 #     if len(all_runs) > 1:
 #         gen_multilevel_shell(all_runs, maindir)
 
+def batch_multiple_main_dirs():
+    """
+    Execute the batch_template_run method (except looking for single, standardized template file) in each of the
+    provided directories so as to generate a "super batch" that can be run from a single combined shell script.
+    :return: void
+    :rtype:
+    """
+    # get directories
+    dir_list = tkfilebrowser.askopendirnames()
+
+    combined_shell_lines = ['#!/bin/bash\nset -xe\n\n']
+    for index, main_dir in enumerate(dir_list):
+        # find template and parse
+        template_files = [os.path.join(main_dir, x) for x in os.listdir(main_dir) if x.endswith('template.csv')]
+        if not len(template_files) == 1:
+            print('ERROR: {} template files found (needs to be 1) in directory {}'.format(len(template_files), main_dir))
+            return
+        template_run_list, main_dir, run_folders = parse_template(template_files[0])
+
+        # run the prescribed batch
+        shell_lines = gen_multilevel_shell(template_run_list, main_dir)
+
+        # add to the final combined output shell
+        combined_shell_lines.append('\n# BATCH {} of {} \n'.format(index + 1, len(dir_list)))
+        combined_shell_lines.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(main_dir)))
+        combined_shell_lines.append('{}/fragger_shell_multi.sh\n'.format(PrepFraggerRuns.update_folder_linux(main_dir)))
+
+    output_path = os.path.join(os.path.dirname(dir_list[0]), 'combined.sh')
+    with open(output_path, 'w', newline='') as outfile:
+        for line in combined_shell_lines:
+            outfile.write(line)
+
 
 def batch_template_run(override_maindir):
     """
@@ -761,4 +798,7 @@ if __name__ == '__main__':
 
     # main(batch_mode=False)
     # main(batch_mode=True)
-    batch_template_run(OVERRIDE_MAINDIR)
+    if USE_BATCH:
+        batch_multiple_main_dirs()
+    else:
+        batch_template_run(OVERRIDE_MAINDIR)

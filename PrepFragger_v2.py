@@ -291,70 +291,76 @@ def gen_multilevel_shell(run_containers, main_dir, run_folders=None):
     :type run_containers: list[RunContainer]
     :param main_dir: directory in which to save output
     :param run_folders: if doing a combined run on an outer dir, want to run Philosopher on the run subfolders rather than the main dir
-    :return: void
+    :return: shell text (also saves it to file)
     """
     output_shell_name = os.path.join(main_dir, 'fragger_shell_multi{}.sh'.format(RUN_IN_PROGRESS))
-    with open(output_shell_name, 'w', newline='') as shellfile:
-        # header
-        shellfile.write('#!/bin/bash\nset -xe\n\n')
-        all_subfolders = []
-        shell_base = ''
-        for index, run_container in enumerate(run_containers):
-            shellfile.write('# Fragger Run {} of {}*************************************\n'.format(index + 1, len(run_containers)))
-            run_shell_lines = gen_single_shell_activation(run_container, write_output=False, run_philosopher=False)
-            shell_base = PrepFraggerRuns.read_shell(run_container.shell_template)
-            for line in run_shell_lines:
-                shellfile.write(line)
-            shellfile.write('\n')
+    output_shell_lines = ['#!/bin/bash\nset -xe\n\n']
 
-            # add philosopher run on all subfolders at the end
-            if run_container.subfolder not in all_subfolders:
-                all_subfolders.append(run_container.subfolder)
+    # generate shell text
+    # header
+    all_subfolders = []
+    shell_base = ''
+    for index, run_container in enumerate(run_containers):
+        output_shell_lines.append('# Fragger Run {} of {}*************************************\n'.format(index + 1, len(run_containers)))
+        run_shell_lines = gen_single_shell_activation(run_container, write_output=False, run_philosopher=False)
+        shell_base = PrepFraggerRuns.read_shell(run_container.shell_template)
+        for line in run_shell_lines:
+            output_shell_lines.append(line)
+        output_shell_lines.append('\n')
 
-        if not SERIAL_PHILOSOPHER:
-            # don't run philosopher in shell because this has to be run in the docker container, and philosopher has to be run outside it
-            if not RAW_FORMAT == '.d':
-                # run philosopher in parallel
-                shellfile.write('#********************Philosopher Runs*******************\n')
-                if run_folders is None:
-                    if run_containers[0].enzyme is not '':
-                        shellfile.write('cd ../../\n')      # up two directories if using enzymes, since data is inside enzyme dir
-                    else:
-                        shellfile.write('cd ../\n')
-                    write_multi_phil(shellfile, run_containers, all_subfolders, shell_base)
+        # add philosopher run on all subfolders at the end
+        if run_container.subfolder not in all_subfolders:
+            all_subfolders.append(run_container.subfolder)
+
+    if not SERIAL_PHILOSOPHER:
+        # don't run philosopher in shell because this has to be run in the docker container, and philosopher has to be run outside it
+        if not RAW_FORMAT == '.d':
+            # run philosopher in parallel
+            output_shell_lines.append('#********************Philosopher Runs*******************\n')
+            if run_folders is None:
+                if run_containers[0].enzyme is not '':
+                    output_shell_lines.append('cd ../../\n')      # up two directories if using enzymes, since data is inside enzyme dir
                 else:
-                    # multiple run subfolders. CD to each in the list in turn
-                    for run_folder in run_folders:
-                        shellfile.write('cd {}/__FraggerResults\n'.format(PrepFraggerRuns.update_folder_linux(run_folder)))
-                        write_multi_phil(shellfile, run_containers, all_subfolders, shell_base)
+                    output_shell_lines.append('cd ../\n')
+                write_multi_phil(output_shell_lines, run_containers, all_subfolders, shell_base)
+            else:
+                # multiple run subfolders. CD to each in the list in turn
+                for run_folder in run_folders:
+                    output_shell_lines.append('cd {}/__FraggerResults\n'.format(PrepFraggerRuns.update_folder_linux(run_folder)))
+                    write_multi_phil(output_shell_lines, run_containers, all_subfolders, shell_base)
 
-        else:
-            # old serial philosopher code. Does NOT currently support multi-enzyme mode or outer directory fanciness
-            for index, subfolder in enumerate(all_subfolders):
-                shellfile.write('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
-                shellfile.write('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
-                phil_lines = gen_philosopher_lines(shell_base, run_containers[index], serial=True)
-                for line in phil_lines:
-                    shellfile.write(line)
-                shellfile.write('\n')
+    else:
+        # old serial philosopher code. Does NOT currently support multi-enzyme mode or outer directory fanciness
+        for index, subfolder in enumerate(all_subfolders):
+            output_shell_lines.append('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
+            output_shell_lines.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
+            phil_lines = gen_philosopher_lines(shell_base, run_containers[index], serial=True)
+            for line in phil_lines:
+                output_shell_lines.append(line)
+            output_shell_lines.append('\n')
+
+    # write final output to shell
+    with open(output_shell_name, 'w', newline='') as shellfile:
+        for line in output_shell_lines:
+            shellfile.write(line)
+    return output_shell_lines
 
 
-def write_multi_phil(shellfile, run_containers, all_subfolders, shell_base):
+def write_multi_phil(output_shell_lines, run_containers, all_subfolders, shell_base):
     """
-    helper for writing out the multitrheaded philosopher shell code to call in multiple places. Assumes that:
-    1) shellfile is already open for writing
-    2) a 'cd' to the correct outer directory has already been performed
-    :return: void
+    helper for writing out the multitrheaded philosopher shell code to call in multiple places. Edits the
+    provided list of lines and returns it.
+    :return: updated list of output lines
     :rtype:
     """
-    shellfile.write('for folder in *; do\n')  # loop over everything in results directory
-    shellfile.write('\tif [[ -d $folder ]]; then\n')  # if item is a directory, consider it
-    shellfile.write('\t\tif [[ ! -e $folder/psm.tsv ]] && [[ -e $folder/phil.sh ]] ; then\n')  # don't run philosopher if psm.tsv already exists (prevent re-running old results)
-    shellfile.write('\t\t\techo $folder\n')
-    shellfile.write('\t\t\t$folder/phil.sh &> $folder/phil.log &\n')  # run philospher shell script
-    shellfile.write('\t\tfi\n')
-    shellfile.write('\tfi\n')
-    shellfile.write('done\n')
+    output_shell_lines.append('for folder in *; do\n')  # loop over everything in results directory
+    output_shell_lines.append('\tif [[ -d $folder ]]; then\n')  # if item is a directory, consider it
+    output_shell_lines.append('\t\tif [[ ! -e $folder/psm.tsv ]] && [[ -e $folder/phil.sh ]] ; then\n')  # don't run philosopher if psm.tsv already exists (prevent re-running old results)
+    output_shell_lines.append('\t\t\techo $folder\n')
+    output_shell_lines.append('\t\t\t$folder/phil.sh &> $folder/phil.log &\n')  # run philospher shell script
+    output_shell_lines.append('\t\tfi\n')
+    output_shell_lines.append('\tfi\n')
+    output_shell_lines.append('done\n')
 
     # if multienzyme, we also need to prep combined philosopher runs with manual parameters, since the individual philosopher shells don't work (b/c pipeline can't handle multienzyme)
     if run_containers[0].enzyme is not '':
@@ -371,6 +377,7 @@ def write_multi_phil(shellfile, run_containers, all_subfolders, shell_base):
                 for line in phil_lines:
                     phil_shell.write(line)
                 phil_shell.write('\n')
+    return output_shell_lines
 
 
 def gen_philosopher_lines(shell_template_lines, run_container: RunContainer, serial=False):

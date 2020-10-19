@@ -562,16 +562,16 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
                 fragger_cmd = '{} -Xmx{}G -jar '.format(JAVA_TO_USE, run_container.fragger_mem)
             if run_container.activation_type is '':
                 if run_container.enzyme is '':
-                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*{}\n'.format(run_container.raw_format)
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*{}'.format(run_container.raw_format)
                 else:
-                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}*{}\n'.format(run_container.enzyme, run_container.raw_format)
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}*{}'.format(run_container.enzyme, run_container.raw_format)
             else:
                 if run_container.enzyme is '':
-                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}\n'.format(run_container.activation_type, run_container.raw_format)
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}{}'.format(run_container.activation_type, run_container.raw_format)
                 else:
-                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}*_{}*{}\n'.format(run_container.enzyme, run_container.activation_type, run_container.raw_format)
+                    fragger_cmd += '$msfraggerPath $fraggerParamsPath $dataDirPath/*_{}*_{}*{}'.format(run_container.enzyme, run_container.activation_type, run_container.raw_format)
             output.append('start_time=$(date)\n')
-            output.append(fragger_cmd)
+            output.append('{} |& tee ./fragger.log\n'.format(fragger_cmd))  # write fragger log to file in the results folder
             output.append('end_time=$(date)\n')
 
         elif line.startswith('$philosopherPath pipeline'):

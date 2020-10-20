@@ -35,14 +35,14 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-3.1-rc27_20200919.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'  # deiso paper
 # FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'   # Sciex deiso paper
-FRAGGER_JARNAME = 'msfragger-3.1.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
 
-USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
-# USE_BATCH = False
+# USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
+USE_BATCH = False
 
-FRAGGER_MEM = 400
+FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.d'
 
@@ -91,6 +91,7 @@ class RunContainer(object):
     enzyme: str
     enzyme_yml_path: str
     split_dbs: int      # for splitting database if > 0
+    is_last_activation_type: bool
 
 
 def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, main_dir, activation_types, enzymes, raw_names_list, fragger_jar, annotation_path):
@@ -129,8 +130,11 @@ def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, ma
                     # multi-enzyme run
                     for enzyme in enzymes:
                         if len(activation_types) > 0:
-                            for activation_type in activation_types:
-                                run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, enzyme=enzyme, raw_name_append=raw_path_append, annotation_path=annotation_path)
+                            for act_index, activation_type in enumerate(activation_types):
+                                if act_index + 1 == len(activation_types):
+                                    run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, enzyme=enzyme, raw_name_append=raw_path_append, annotation_path=annotation_path, is_last_activation_type=True)
+                                else:
+                                    run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, enzyme=enzyme, raw_name_append=raw_path_append, annotation_path=annotation_path, is_last_activation_type=False)
                                 run_containers.append(run_container)
                         else:
                             run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, enzyme=enzyme, raw_name_append=raw_path_append, annotation_path=annotation_path)
@@ -138,8 +142,11 @@ def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, ma
                 else:
                     # single enzyme run
                     if len(activation_types) > 0:
-                        for activation_type in activation_types:
-                            run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, raw_name_append=raw_path_append, annotation_path=annotation_path)
+                        for act_index, activation_type in enumerate(activation_types):
+                            if act_index + 1 == len(activation_types):
+                                run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, raw_name_append=raw_path_append, annotation_path=annotation_path, is_last_activation_type=True)
+                            else:
+                                run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=activation_type, raw_name_append=raw_path_append, annotation_path=annotation_path, is_last_activation_type=False)
                             run_containers.append(run_container)
                     else:
                         run_container = generate_single_run(params_file, yml_file, raw_path, shell_template, main_dir, fragger_jar, raw_name_append=raw_path_append, annotation_path=annotation_path)
@@ -147,7 +154,7 @@ def prepare_runs_yml(params_files, yml_files, raw_path_files, shell_template, ma
     return run_containers
 
 
-def generate_single_run(base_param_path, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=None, enzyme=None, raw_name_append='', annotation_path=''):
+def generate_single_run(base_param_path, yml_file, raw_path, shell_template, main_dir, fragger_jar, activation_type=None, enzyme=None, raw_name_append='', annotation_path='', is_last_activation_type=True):
     """
     Generate a RunContainer from the provided information and return it
     :param base_param_path: .params file for Fragger (path)
@@ -213,7 +220,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
         run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path,
                                      yml_final_linux_path, fragger_jar, FRAGGER_MEM, RAW_FORMAT, activation_type,
-                                     enzyme_subfolder, enzyme, enzyme_yml_linux, SPLIT_DBS)
+                                     enzyme_subfolder, enzyme, enzyme_yml_linux, SPLIT_DBS, is_last_activation_type)
         gen_single_shell_activation(run_container, write_output=True, run_philosopher=False)
 
     else:
@@ -229,7 +236,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
 
         # generate single shell for individual runs (if desired)
         run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path, yml_final_linux_path,
-                                     fragger_jar, FRAGGER_MEM, RAW_FORMAT, activation_type, '', '', '', SPLIT_DBS)
+                                     fragger_jar, FRAGGER_MEM, RAW_FORMAT, activation_type, '', '', '', SPLIT_DBS, is_last_activation_type)
         gen_single_shell_activation(run_container, write_output=True, run_philosopher=True)
     return run_container
 
@@ -601,8 +608,9 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
             output.append(line)
 
     if run_container.enzyme is not '':
-        # add peptide prophet run and moving out of subfolder
-        output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
+        # add peptide prophet run and moving out of subfolder. NOTE: only add pep prophet run if this is the LAST activation type (otherwise will create redundant runs)
+        if run_container.is_last_activation_type:
+            output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
         phil_output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
 
     if write_output:

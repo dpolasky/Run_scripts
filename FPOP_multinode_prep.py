@@ -11,9 +11,9 @@ import os
 import shutil
 import PrepFraggerRuns
 
-# DATABASE_FILE = r"Z:\dpolasky\projects\FPOP\2020-07-03-decoys-reviewed-contam-UP000001940.fas"
+DATABASE_FILE = r"Z:\dpolasky\projects\FPOP\2020-07-03-decoys-reviewed-contam-UP000001940.fas"
 # DATABASE_FILE = r"Z:\dpolasky\projects\FPOP\2020-07-03-decoys-contam-UP000001940.fas"
-DATABASE_FILE = r"Z:\dpolasky\projects\FPOP\2020-10-20-decoys-reviewed-UP000001940.fas"
+# DATABASE_FILE = r"Z:\dpolasky\projects\FPOP\2020-10-20-decoys-reviewed-UP000001940.fas"
 
 RESULTS_FOLDER = '__FraggerResults'
 FINAL_SHELL_PATH = r"Z:\dpolasky\projects\FPOP\copy_and_iProphet.sh"
@@ -73,7 +73,7 @@ def create_multinode_folder(param_files):
         # haven't reached 'node' yet, so add to name
         stop_index = index
     common_name = '-'.join(splits[:stop_index + 1])
-    common_name += '-node'
+    common_name_with_node = common_name + '-node'
 
     common_folder_path = os.path.join(main_dir, RESULTS_FOLDER, common_name)
     if not os.path.exists(common_folder_path):
@@ -95,7 +95,7 @@ def create_multinode_folder(param_files):
     # copy and edit shell file for running the final analysis
     output_shell_path = os.path.join(common_folder_path, os.path.basename(FINAL_SHELL_PATH))
     shutil.copy(FINAL_SHELL_PATH, output_shell_path)
-    edit_shell(output_shell_path, PrepFraggerRuns.update_folder_linux(DATABASE_FILE), common_name, RAWDIR)
+    edit_shell(output_shell_path, PrepFraggerRuns.update_folder_linux(DATABASE_FILE), common_name_with_node, RAWDIR)
 
 
 if __name__ == '__main__':

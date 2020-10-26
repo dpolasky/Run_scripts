@@ -2,8 +2,8 @@
 convenience wrapper for running individual runs since I seem to be doing this a lot
 """
 
-import tkinter
-from tkinter import filedialog
+# import tkinter
+# from tkinter import filedialog
 import os
 import shutil
 
@@ -21,13 +21,13 @@ def prep_individ_run(results_folder, shell_file):
     return subfolder
 
 
-if __name__ == '__main__':
-    root = tkinter.Tk()
-    root.withdraw()
-
-    # maindir = filedialog.askdirectory()
-    shell_base = filedialog.askopenfilename(filetypes=[('.sh', '.sh')])
-    outerdir = os.path.dirname(shell_base)
-
-    maindir = filedialog.askdirectory()
-    prep_individ_run(maindir, shell_base)
+# if __name__ == '__main__':
+#     root = tkinter.Tk()
+#     root.withdraw()
+#
+#     # maindir = filedialog.askdirectory()
+#     shell_base = filedialog.askopenfilename(filetypes=[('.sh', '.sh')])
+#     outerdir = os.path.dirname(shell_base)
+#
+#     maindir = filedialog.askdirectory()
+#     prep_individ_run(maindir, shell_base)

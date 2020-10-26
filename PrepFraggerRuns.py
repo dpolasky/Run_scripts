@@ -2,8 +2,8 @@
 Module to do gruntwork for preparing many fragger runs in various folders
 """
 
-import tkinter
-from tkinter import filedialog
+# import tkinter
+# from tkinter import filedialog
 import os
 import shutil
 import PrepIndividFDRruns
@@ -254,21 +254,21 @@ def read_shell(shell_file):
     return lines
 
 
-if __name__ == '__main__':
-    root = tkinter.Tk()
-    root.withdraw()
-
-    # maindir = filedialog.askdirectory()
-    shell_base = filedialog.askopenfilename(filetypes=[('.sh', '.sh')])
-    maindir = os.path.dirname(shell_base)
-
-    paramfiles = filedialog.askopenfilenames(filetypes=[('.params', '.params')])
-
-    # try to find DB file and shell template
-    dirfiles = os.listdir(maindir)
-    # shell_files = [os.path.join(maindir, x) for x in dirfiles if x.endswith('.sh')]
-    # db_files = [os.path.join(maindir, x) for x in dirfiles if x.endswith('.fasta') or x.endswith('.fas')]
-    prepare_runs(paramfiles, shell_base)
+# if __name__ == '__main__':
+    # root = tkinter.Tk()
+    # root.withdraw()
+    #
+    # # maindir = filedialog.askdirectory()
+    # shell_base = filedialog.askopenfilename(filetypes=[('.sh', '.sh')])
+    # maindir = os.path.dirname(shell_base)
+    #
+    # paramfiles = filedialog.askopenfilenames(filetypes=[('.params', '.params')])
+    #
+    # # try to find DB file and shell template
+    # dirfiles = os.listdir(maindir)
+    # # shell_files = [os.path.join(maindir, x) for x in dirfiles if x.endswith('.sh')]
+    # # db_files = [os.path.join(maindir, x) for x in dirfiles if x.endswith('.fasta') or x.endswith('.fas')]
+    # prepare_runs(paramfiles, shell_base)
 
     # if len(db_files) == 1:
     #     dbfile = db_files[0]

@@ -36,14 +36,15 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'  # deiso paper
 # FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'   # Sciex deiso paper
 # FRAGGER_JARNAME = 'msfragger-3.1.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
-
+FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1.1_20201020_kludge-putToVarALL.one-jar.jar'
 # USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
 USE_BATCH = False
 
 FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
+# RAW_FORMAT = '.mgf'
 # RAW_FORMAT = '.d'
 
 # QUANT_COPY_ANNOTATION_FILE = True
@@ -548,7 +549,18 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
     phil_output.append('# Change dir to local workspace\ncd {}\n'.format(linux_folder))
     phil_output = check_empty_phil(phil_output)
 
+    skip_counter = 0
     for line in shell_lines:
+        if skip_counter > 0:
+            skip_counter -= 1
+            continue
+
+        # skip mgf moving (6 lines after the this one) if using mgf format
+        if RAW_FORMAT == '.mgf':
+            if line.startswith('for file in $dataDirPath/*.mgf'):
+                skip_counter = 6
+                continue
+
         if line.startswith('fasta'):
             if run_container.enzyme is not '':
                 output.append('fastaPath="../{}"\n'.format(run_container.database_file))

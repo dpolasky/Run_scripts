@@ -9,18 +9,20 @@ import subprocess
 import multiprocessing
 import time
 
+CHECK_ONLY = False  # do not actually run MSConvert if True, only validate that files are all converted successfully
+
 tool_path = r"C:\Users\dpolasky\AppData\Local\Apps\ProteoWizard 3.0.19296.ebe17a86f 64-bit\msconvert.exe"
 out_dir = ''
-DEISOTOPE = True
+DEISOTOPE = False
 DEISO_TIME_TEST = False
 RUN_BOTH = False
 THREADS = 8
 MAX_CHARGE = 6
 # ACTIVATION_LIST = ['HCD', 'AIETD']   # 'ETD', 'HCD', etc. IF NOT USING, SET TO ['']
-ACTIVATION_LIST = None
+# ACTIVATION_LIST = None
 # ACTIVATION_LIST = ['AIETD']
 # ACTIVATION_LIST = ['HCD']
-# ACTIVATION_LIST = ['HCD', 'EThcD']  # FOLLOW-UP REQUIRED! MSConvert cannot distinguish. Use RemoveScans_mzML.py!
+ACTIVATION_LIST = ['HCD', 'EThcD']  # FOLLOW-UP REQUIRED! MSConvert cannot distinguish. Use RemoveScans_mzML.py!
 # ACTIVATION_LIST = ['EThcD']    # FOLLOW-UP REQUIRED! MSConvert cannot distinguish. Use RemoveScans_mzML.py!
 # ACTIVATION_LIST = ['HCD', 'ETD']
 # ACTIVATION_LIST = ['ETD']
@@ -211,8 +213,10 @@ if __name__ == '__main__':
     files = filedialog.askopenfilenames(filetypes=[('Raw', '.raw'), ('mzML', '.mzml')])
     files = [os.path.join(os.path.dirname(x), x) for x in files]
 
-    # run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)
-    check_converted_files(files)
+    if CHECK_ONLY:
+        check_converted_files(files)
+    else:
+        run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)
 
     # main_dir = os.path.dirname(files[0])
     # output_files = [os.path.join(main_dir, x) for x in os.listdir(main_dir) if x.endswith('.mzML')]

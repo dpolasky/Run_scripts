@@ -8,6 +8,7 @@ import os
 import subprocess
 import multiprocessing
 import time
+import RemoveScans_mzML
 
 CHECK_ONLY = False  # do not actually run MSConvert if True, only validate that files are all converted successfully
 
@@ -19,10 +20,10 @@ RUN_BOTH = False
 THREADS = 8
 MAX_CHARGE = 6
 # ACTIVATION_LIST = ['HCD', 'AIETD']   # 'ETD', 'HCD', etc. IF NOT USING, SET TO ['']
-# ACTIVATION_LIST = None
+ACTIVATION_LIST = None
 # ACTIVATION_LIST = ['AIETD']
 # ACTIVATION_LIST = ['HCD']
-ACTIVATION_LIST = ['HCD', 'EThcD']  # FOLLOW-UP REQUIRED! MSConvert cannot distinguish. Use RemoveScans_mzML.py!
+# ACTIVATION_LIST = ['HCD', 'EThcD']  # FOLLOW-UP REQUIRED! MSConvert cannot distinguish. Use RemoveScans_mzML.py!
 # ACTIVATION_LIST = ['EThcD']    # FOLLOW-UP REQUIRED! MSConvert cannot distinguish. Use RemoveScans_mzML.py!
 # ACTIVATION_LIST = ['HCD', 'ETD']
 # ACTIVATION_LIST = ['ETD']
@@ -161,15 +162,8 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
         # rename files by activation type
         if activation is not None:
             outputfiles = [os.path.join(outputdir, x) for x in os.listdir(outputdir)]
-            for outputfile in outputfiles:
-                old_filename = os.path.splitext(os.path.basename(outputfile))[0]
-                new_filename = '{}_{}{}'.format(old_filename, activation, os.path.splitext(outputfile)[1])
-                new_path = os.path.join(maindir, new_filename)
-                try:
-                    os.rename(outputfile, new_path)
-                except PermissionError:
-                    print('Permission error for file {}'.format(outputfile))
-                    continue
+            rename_files_activation(activation, outputfiles)
+
     output_files = [os.path.join(maindir, x) for x in os.listdir(maindir) if x.endswith('.mzML')]
     print('checking {} file outputs...'.format(len(output_files)))
     bad_files = check_converted_files(output_files)
@@ -177,6 +171,34 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
     #     print('Bad: {}'.format(file))
     if len(bad_files) == 0:
         print('All files extracted successfully')
+
+
+def rename_files_activation(activation, outputfiles, do_ethcd_fix=False):
+    """
+    Rename activation files to file_activation.mzML if needed. Also run remove_scans_mzML if needed for HCD/EThcD combo
+    :param activation: activation string
+    :type activation: str
+    :param outputfiles: list of files to consider
+    :type outputfiles: list
+    :param do_ethcd_fix: if True, remove scans containing ETD from EThcD (to give HCD only)
+    :return: void
+    :rtype:
+    """
+    maindir = os.path.dirname(outputfiles[0])
+    for outputfile in outputfiles:
+        old_filename = os.path.splitext(os.path.basename(outputfile))[0]
+        new_filename = '{}_{}{}'.format(old_filename, activation, os.path.splitext(outputfile)[1])
+        new_path = os.path.join(maindir, new_filename)
+        try:
+            os.rename(outputfile, new_path)
+        except PermissionError:
+            print('Permission error for file {}'.format(outputfile))
+            kill_msconvert_procs()
+            os.rename(outputfile, new_path)     # todo: can it still crash here?
+
+        # if EThcD, fix files here too
+        if do_ethcd_fix:
+            RemoveScans_mzML.filter_scans(new_path, [RemoveScans_mzML.ActivationType.HCD], maindir)  # keep HCD only (e.g. do on 'HCD' output of EThcD conversion to remove EThcD scans from the HCD file)
 
 
 def check_converted_files(file_list):
@@ -206,6 +228,71 @@ def kill_msconvert_procs():
     subprocess.Popen("taskkill /F /T /PID %i" % handle.pid, shell=True)
 
 
+def singlethr_guarantee_slow_method(raw_files, activation_types, deisotope):
+    """
+    Single threaded version with extra redundancy to try to guarantee that files finish converting successfully
+    even when errors are hit. Note: errors occur when converting Thermo files, if there is an empty scan, and the
+    remove 0's filter is specified, but only sometimes (?). Checks and re-runs failed processes after killing the
+    previous MSConvert process if it's still running.
+    :param raw_files: list of raw files to convert
+    :type raw_files: list
+    :param activation_types: list of strings or None
+    :type activation_types: list
+    :param deisotope: whether to desiotope with MSConvert
+    :type deisotope: bool
+    :return: void
+    :rtype:
+    """
+    outputdir = os.path.dirname(raw_files[0])
+    if activation_types is None:
+        activation_types = [None]
+
+    for activation in activation_types:
+        output_files = []
+        for file in raw_files:
+            cmd = format_commands(file, deisotope=deisotope, activation_method=activation, output_dir=outputdir)
+            output_path = inner_loop(cmd, file)
+            output_files.append(output_path)
+        if activation is not None:
+            if 'EThcD' in activation_types:
+                if activation == 'HCD':
+                    fix_hcd = True
+                else:
+                    fix_hcd = False
+            else:
+                fix_hcd = False
+            rename_files_activation(activation, output_files, fix_hcd)
+
+    # check all files again at the end
+    output_files = [os.path.join(outputdir, x) for x in os.listdir(outputdir) if x.endswith('.mzML')]
+    print('checking {} file outputs...'.format(len(output_files)))
+    bad_files = check_converted_files(output_files)
+    if len(bad_files) == 0:
+        print('All files extracted successfully')
+
+
+def inner_loop(cmd, filepath):
+    """
+    Inner loop of actual file conversion to enable running until MSConvert gets it right
+    :param cmd: command string to pass to MSConvert
+    :type cmd: str
+    :param filepath: file being converted (full path)
+    :type filepath: str
+    :return:
+    :rtype:
+    """
+    run_cmd(cmd)
+    # check output
+    output_path = os.path.splitext(filepath)[0] + '.mzML'
+    bad_files = check_converted_files([output_path])
+    if len(bad_files) > 0:
+        print('retrying conversion in file {}'.format(os.path.basename(filepath)))
+        # conversion failed - kill MSConvert and retry
+        kill_msconvert_procs()
+        inner_loop(cmd, filepath)
+    return output_path
+
+
 if __name__ == '__main__':
     root = tkinter.Tk()
     root.withdraw()
@@ -216,8 +303,8 @@ if __name__ == '__main__':
     if CHECK_ONLY:
         check_converted_files(files)
     else:
-        run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)
-
+        # run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)
+        singlethr_guarantee_slow_method(files, ACTIVATION_LIST, DEISOTOPE)
     # main_dir = os.path.dirname(files[0])
     # output_files = [os.path.join(main_dir, x) for x in os.listdir(main_dir) if x.endswith('.mzML')]
     # bad_files = check_converted_files(output_files)

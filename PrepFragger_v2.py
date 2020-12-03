@@ -36,21 +36,27 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'  # deiso paper
 # FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'   # Sciex deiso paper
 # FRAGGER_JARNAME = 'msfragger-3.1.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1.1_20201020_kludge-putToVarALL.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.2-rc1_20201113_deisoTolTest.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-3.2-rc2_20201116.one-jar.jar'
+
 # USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
 USE_BATCH = False
 
-FRAGGER_MEM = 200
+FRAGGER_MEM = 400
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.mgf'
 # RAW_FORMAT = '.d'
 
-# QUANT_COPY_ANNOTATION_FILE = True
-QUANT_COPY_ANNOTATION_FILE = False
+RUN_TMTI = True     # run TMT-integrator
+# RUN_TMTI = False
+QUANT_COPY_ANNOTATION_FILE = True
+# QUANT_COPY_ANNOTATION_FILE = False
 if QUANT_COPY_ANNOTATION_FILE:
     print('Dont forget to add mzML files to path using link_mzml shell script before phil runs quant!')
+TMTI_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\TMTIntegrator_v2.1.5.jar"
+TMTI_MODS = 'S[167], T[181], Y[243], K[170], K[471]'
 
 # JAVA_TO_USE = 'java'        # use default java
 JAVA_TO_USE = '/storage/dpolasky/tools/bin/jdk-14.0.2/bin/java'        # java 14 = fast
@@ -445,7 +451,20 @@ def edit_yml(yml_file, database_path, disable_peptide_prophet=False):
             if line.startswith('  peptideprophet'):
                 if disable_peptide_prophet:
                     line = '  peptideprophet: no\n'
+            if RUN_TMTI:    # edit TMT-I params
+                if line.startswith('  path'):
+                    line = '  path: {}\n'.format(PrepFraggerRuns.update_folder_linux(TMTI_PATH))
+                if line.startswith('  memory'):
+                    line = '  memory: {}\n'.format(FRAGGER_MEM)
+                if line.startswith('  output'):
+                    tmt_dir = os.path.join(os.path.dirname(yml_file), 'tmt-report')
+                    if not os.path.exists(tmt_dir):
+                        os.makedirs(tmt_dir)
+                    line = '  output: {}\n'.format(PrepFraggerRuns.update_folder_linux(tmt_dir))
+                if line.startswith('  mod_tag'):
+                    line = '  mod_tag: {}\n'.format(TMTI_MODS)
             lines.append(line)
+
     with open(yml_file, 'w') as outfile:
         for line in lines:
             outfile.write(line)

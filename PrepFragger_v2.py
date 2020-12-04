@@ -218,7 +218,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         enzyme_yml = make_yml_peptideproph_only(yml_file, '../{}'.format(db_file), enzyme, enzyme_subfolder)
         enzyme_yml_linux = PrepFraggerRuns.update_folder_linux(enzyme_yml)
 
-        yml_output_path = os.path.join(param_subfolder, 'phil_config.yml')
+        yml_output_path = os.path.join(param_subfolder, 'philosopher.yml')
         shutil.copy(yml_file, yml_output_path)
         edit_yml(yml_output_path, db_file, disable_peptide_prophet=True)
         if annotation_path is not '':
@@ -232,7 +232,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
 
     else:
         # copy yml file for philosopher and edit the fasta path in it
-        yml_output_path = os.path.join(param_subfolder, 'phil_config.yml')
+        yml_output_path = os.path.join(param_subfolder, 'philosopher.yml')
         shutil.copy(yml_file, yml_output_path)
         edit_yml(yml_output_path, db_file)
         if annotation_path is not '':
@@ -519,7 +519,7 @@ def make_yml_peptideproph_only(yml_base, database_path, enzyme, output_subfolder
             lines.append(line)
 
     # write output
-    new_path = os.path.join(output_subfolder, os.path.basename('phil_config.yml'))
+    new_path = os.path.join(output_subfolder, os.path.basename('philosopher.yml'))
     with open(new_path, 'w') as outfile:
         for line in lines:
             outfile.write(line)
@@ -641,8 +641,8 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
     if run_container.enzyme is not '':
         # add peptide prophet run and moving out of subfolder. NOTE: only add pep prophet run if this is the LAST activation type (otherwise will create redundant runs)
         if run_container.is_last_activation_type:
-            output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
-        phil_output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config phil_config.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
+            output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config philosopher.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
+        phil_output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config philosopher.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
 
     if write_output:
         with open(new_shell_name, 'w', newline='') as shellfile:

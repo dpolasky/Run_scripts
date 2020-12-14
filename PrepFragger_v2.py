@@ -56,8 +56,8 @@ RUN_PTMPROPHET = True
 # RUN_PTMPROPHET = False
 # QUANT_COPY_ANNOTATION_FILE = True
 QUANT_COPY_ANNOTATION_FILE = False
-if QUANT_COPY_ANNOTATION_FILE or RUN_PTMPROPHET or RUN_TMTI:
-    print('Dont forget to add mzML files to path using link_mzml shell script before phil runs quant!')
+# if QUANT_COPY_ANNOTATION_FILE or RUN_PTMPROPHET or RUN_TMTI:
+#     print('Dont forget to add mzML files to path using link_mzml shell script before phil runs quant!')
 
 TMTI_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\TMTIntegrator_v2.1.5.jar"
 TMTI_MODS = 'S[167], T[181], Y[243], K[170], K[471]'
@@ -65,8 +65,8 @@ TMTI_MODS = 'S[167], T[181], Y[243], K[170], K[471]'
 # JAVA_TO_USE = 'java'        # use default java
 JAVA_TO_USE = '/storage/dpolasky/tools/bin/jdk-14.0.2/bin/java'        # java 14 = fast
 
-SERIAL_PHILOSOPHER = False
-# SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
+# SERIAL_PHILOSOPHER = False
+SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
 
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 # RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (search is still run in raw dir, so will overwrite)
@@ -229,6 +229,8 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         edit_yml(yml_output_path, db_file, disable_peptide_prophet=True)
         if annotation_path is not '':
             shutil.copy(annotation_path, os.path.join(enzyme_subfolder, os.path.basename(annotation_path)))
+        if RUN_PTMPROPHET:
+            copy_yml_disable_tools(yml_output_path, ['peptide'], param_subfolder)
         # symlink_raw_files(enzyme_subfolder, raw_path, RAW_FORMAT, activation_type, enzyme)
         yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
         run_container = RunContainer(param_subfolder, param_path, db_file, shell_template, raw_path,
@@ -243,6 +245,8 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         edit_yml(yml_output_path, db_file)
         if annotation_path is not '':
             shutil.copy(annotation_path, os.path.join(param_subfolder, os.path.basename(annotation_path)))
+        if RUN_PTMPROPHET:
+            copy_yml_disable_tools(yml_output_path, ['peptide'], param_subfolder)
         # symlink raw files for downstream tools - doesn't work if running philosopher on linux because these are windows symlinks...
         # symlink_raw_files(param_subfolder, raw_path, RAW_FORMAT, activation_type, '')
         yml_final_linux_path = PrepFraggerRuns.update_folder_linux(yml_output_path)
@@ -321,21 +325,28 @@ def gen_multilevel_shell(run_containers, main_dir, run_folders=None):
     output_shell_name = os.path.join(main_dir, 'fragger_shell_multi{}.sh'.format(RUN_IN_PROGRESS))
     output_shell_lines = ['#!/bin/bash\nset -xe\n\n']
 
+    if QUANT_COPY_ANNOTATION_FILE or RUN_PTMPROPHET or RUN_TMTI:
+        # link mzmls using standardized script (must be present in the main folder for this to work)
+        output_shell_lines.append('# link mzMLs for quant or PTM-P\n./link_mzmls_phil.sh\n\n')
+
     # generate shell text
     # header
     all_subfolders = []
-    # shell_base = ''
     for index, run_container in enumerate(run_containers):
         output_shell_lines.append('# Fragger Run {} of {}*************************************\n'.format(index + 1, len(run_containers)))
         run_shell_lines = gen_single_shell_activation(run_container, write_output=False, run_philosopher=False)
-        # shell_base = PrepFraggerRuns.read_shell(run_container.shell_template)
         for line in run_shell_lines:
             output_shell_lines.append(line)
         output_shell_lines.append('\n')
 
-        # add philosopher run on all subfolders at the end
-        if run_container.subfolder not in all_subfolders:
-            all_subfolders.append(run_container.subfolder)
+        if SERIAL_PHILOSOPHER:
+            # new serial philosopher mode - start run after each fragger run, but in parallel so next run can continue
+            subfolder = get_final_subfolder_linux(run_container)
+            output_shell_lines.append('#Run philosopher\n{}/phil.sh &> {}/phil.log &\n\n'.format(subfolder, subfolder))
+        else:
+            # add philosopher run on all subfolders at the end
+            if run_container.subfolder not in all_subfolders:
+                all_subfolders.append(run_container.subfolder)
 
     if not SERIAL_PHILOSOPHER:
         # don't run philosopher in shell because this has to be run in the docker container, and philosopher has to be run outside it
@@ -354,16 +365,15 @@ def gen_multilevel_shell(run_containers, main_dir, run_folders=None):
                     output_shell_lines.append('cd {}/__FraggerResults\n'.format(PrepFraggerRuns.update_folder_linux(run_folder)))
                     write_multi_phil(output_shell_lines, run_containers, all_subfolders)
 
-    else:
-        # old serial philosopher code. Does NOT currently support multi-enzyme mode or outer directory fanciness
-        for index, subfolder in enumerate(all_subfolders):
-            output_shell_lines.append('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
-            output_shell_lines.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
-            phil_lines = gen_philosopher_lines_no_template(run_containers[index])
-            # Todo: change to generate/run the shell in the folder rather than add to main shell here
-            for line in phil_lines:
-                output_shell_lines.append(line)
-            output_shell_lines.append('\n')
+    # else:
+    #     # old serial philosopher code. Does NOT currently support multi-enzyme mode or outer directory fanciness
+    #     for index, subfolder in enumerate(all_subfolders):
+    #         output_shell_lines.append('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
+    #         output_shell_lines.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
+    #         phil_lines = gen_philosopher_lines_no_template(run_containers[index])
+    #         for line in phil_lines:
+    #             output_shell_lines.append(line)
+    #         output_shell_lines.append('\n')
 
     # write final output to shell
     with open(output_shell_name, 'w', newline='') as shellfile:
@@ -443,7 +453,7 @@ def gen_philosopher_lines_no_template(run_container: RunContainer):
         output.append('index=1\n')
         output.append('while [ ! -e ./interact.mod.pep.xml ]; do \n')
         output.append('\tif [ $index -lt 4 ]; then\n')
-        output.append('\t\t$philosopherPath pipeline --config ./philosopher_noPepProph.yml ./ |& tee phil_ptmp-rerun_${index}.log\n')
+        output.append('\t\t$philosopherPath pipeline --config ./philosopher_toolsDisabled.yml ./ |& tee phil_ptmp-rerun_${index}.log\n')
         output.append('\t\tindex=$((index + 1))\n')
         output.append('\tfi \n')
         output.append('done \n')
@@ -491,6 +501,21 @@ def edit_yml(yml_file, database_path, disable_peptide_prophet=False):
             outfile.write(line)
 
 
+def get_final_subfolder_linux(run_container: RunContainer):
+    """
+    Determine the final linux path of the run folder for a given run (allowing for multi-enzyme mode, etc)
+    :param run_container: run container
+    :type run_container: RunContainer
+    :return: final folder path
+    :rtype: str
+    """
+    if run_container.enzyme is not '':
+        # multi-enzyme mode
+        return PrepFraggerRuns.update_folder_linux(run_container.enzyme_subfolder)
+    else:
+        return PrepFraggerRuns.update_folder_linux(run_container.subfolder)
+
+
 def check_empty_phil(output):
     """
     Add check for empty files to philosopher shell script
@@ -513,16 +538,19 @@ def check_empty_phil(output):
     return output
 
 
-def make_yml_peptideproph_only(yml_base, database_path, enzyme, output_subfolder):
+def make_yml_peptideproph_only(yml_base, database_path, enzyme, output_subfolder, v4=False):
     """
     For multi-enzyme search, make a yml file that only runs peptide prophet in the enyzme subdirectory
     :param yml_base: base yml file path
     :param database_path: path to DB **corrected for subfolder**
     :param enzyme: enzyme string
     :param output_subfolder: where to save the edited file
+    :param v4: if using a version 4 (aka version 3.3.x) of philosopher with reconfigured config file
     :return: void
     """
     lines = []
+    if v4:
+        print('version 4 NOT yet configured - please fix!')
     with open(yml_base, 'r') as readfile:
         for line in list(readfile):
             if line.startswith('  protein_database'):
@@ -546,6 +574,40 @@ def make_yml_peptideproph_only(yml_base, database_path, enzyme, output_subfolder
             outfile.write(line)
     return new_path
 
+
+def copy_yml_disable_tools(existing_formatted_yml, tools_to_disable, output_subfolder):
+    """
+    Make a copy of the existing yml file with the specified tools disabled. NOTE: assumes v4 Philosopher yml
+    :param existing_formatted_yml: existing yml (NOT template - actual file in the subfolder) to copy (path)
+    :type existing_formatted_yml: str
+    :param tools_to_disable: list of tool names ('peptide' 'protein' for prophets, etc)
+    :type tools_to_disable: list
+    :param output_subfolder: where to save
+    :type output_subfolder: str
+    :return: void
+    :rtype:
+    """
+    lines = []
+    allowed_tools = ['peptide', 'ptmp']
+    for tool in tools_to_disable:
+        if tool not in allowed_tools:
+            print('ERROR: tool {} is not implemented for yml disabling - please fix or implement'.format(tool))
+
+    with open(existing_formatted_yml, 'r') as readfile:
+        for line in list(readfile):
+            if line.startswith('  Peptide Validation'):
+                if 'peptide' in tools_to_disable:
+                    line = '  Peptide Validation: no\n'
+                elif line.startswith('  PTM Localization'):
+                    if 'ptmp' in tools_to_disable:
+                        line = '  PTM Localization: no\n'
+            lines.append(line)
+
+    # write output
+    new_path = os.path.join(output_subfolder, os.path.basename('philosopher_toolsDisabled.yml'))
+    with open(new_path, 'w') as outfile:
+        for line in lines:
+            outfile.write(line)
 
 # def get_raw_folder(pathraw_file):
 #     """

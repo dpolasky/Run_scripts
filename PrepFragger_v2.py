@@ -38,23 +38,27 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-3.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.2-rc1_20201113_deisoTolTest.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-3.2-rc2_20201116.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201210_putToVar3.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201214_firstAllowed-PTV3.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.2-rc2_20201116.one-jar.jar'
 
 # USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
 USE_BATCH = False
 
-FRAGGER_MEM = 400
+FRAGGER_MEM = 450
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.mgf'
 # RAW_FORMAT = '.d'
 
-RUN_TMTI = True     # run TMT-integrator
-# RUN_TMTI = False
-QUANT_COPY_ANNOTATION_FILE = True
-# QUANT_COPY_ANNOTATION_FILE = False
-if QUANT_COPY_ANNOTATION_FILE:
+# RUN_TMTI = True     # run TMT-integrator
+RUN_TMTI = False
+RUN_PTMPROPHET = True
+# RUN_PTMPROPHET = False
+# QUANT_COPY_ANNOTATION_FILE = True
+QUANT_COPY_ANNOTATION_FILE = False
+if QUANT_COPY_ANNOTATION_FILE or RUN_PTMPROPHET or RUN_TMTI:
     print('Dont forget to add mzML files to path using link_mzml shell script before phil runs quant!')
+
 TMTI_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\TMTIntegrator_v2.1.5.jar"
 TMTI_MODS = 'S[167], T[181], Y[243], K[170], K[471]'
 
@@ -77,6 +81,8 @@ SPLIT_DB_SCRIPT = '/storage/dpolasky/tools/msfragger_pep_split_20191106.py'
 
 # OVERRIDE_MAINDIR = False
 OVERRIDE_MAINDIR = True    # default True. If false, will read maindir from file rather than using the param path (use false for combined runs)
+
+TOOL_DIR_PATH = '/storage/dpolasky/tools'
 
 
 @dataclass
@@ -318,11 +324,11 @@ def gen_multilevel_shell(run_containers, main_dir, run_folders=None):
     # generate shell text
     # header
     all_subfolders = []
-    shell_base = ''
+    # shell_base = ''
     for index, run_container in enumerate(run_containers):
         output_shell_lines.append('# Fragger Run {} of {}*************************************\n'.format(index + 1, len(run_containers)))
         run_shell_lines = gen_single_shell_activation(run_container, write_output=False, run_philosopher=False)
-        shell_base = PrepFraggerRuns.read_shell(run_container.shell_template)
+        # shell_base = PrepFraggerRuns.read_shell(run_container.shell_template)
         for line in run_shell_lines:
             output_shell_lines.append(line)
         output_shell_lines.append('\n')
@@ -341,19 +347,20 @@ def gen_multilevel_shell(run_containers, main_dir, run_folders=None):
                     output_shell_lines.append('cd ../../\n')      # up two directories if using enzymes, since data is inside enzyme dir
                 else:
                     output_shell_lines.append('cd ../\n')
-                write_multi_phil(output_shell_lines, run_containers, all_subfolders, shell_base)
+                write_multi_phil(output_shell_lines, run_containers, all_subfolders)
             else:
                 # multiple run subfolders. CD to each in the list in turn
                 for run_folder in run_folders:
                     output_shell_lines.append('cd {}/__FraggerResults\n'.format(PrepFraggerRuns.update_folder_linux(run_folder)))
-                    write_multi_phil(output_shell_lines, run_containers, all_subfolders, shell_base)
+                    write_multi_phil(output_shell_lines, run_containers, all_subfolders)
 
     else:
         # old serial philosopher code. Does NOT currently support multi-enzyme mode or outer directory fanciness
         for index, subfolder in enumerate(all_subfolders):
             output_shell_lines.append('# Philosopher {} of {}*************************************\n'.format(index + 1, len(all_subfolders)))
             output_shell_lines.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(subfolder)))
-            phil_lines = gen_philosopher_lines(shell_base, run_containers[index], serial=True)
+            phil_lines = gen_philosopher_lines_no_template(run_containers[index])
+            # Todo: change to generate/run the shell in the folder rather than add to main shell here
             for line in phil_lines:
                 output_shell_lines.append(line)
             output_shell_lines.append('\n')
@@ -365,7 +372,7 @@ def gen_multilevel_shell(run_containers, main_dir, run_folders=None):
     return output_shell_lines
 
 
-def write_multi_phil(output_shell_lines, run_containers, all_subfolders, shell_base):
+def write_multi_phil(output_shell_lines, run_containers, all_subfolders):
     """
     helper for writing out the multitrheaded philosopher shell code to call in multiple places. Edits the
     provided list of lines and returns it.
@@ -389,7 +396,7 @@ def write_multi_phil(output_shell_lines, run_containers, all_subfolders, shell_b
                 if run_container.subfolder == subfolder:
                     current_container = run_container
                     break
-            phil_lines = gen_philosopher_lines(shell_base, current_container)
+            phil_lines = gen_philosopher_lines_no_template(current_container)
             # save phil.sh to each subfolder so the multithreaded philosopher shell code above has a phil.sh file to find
             output_shell_path = os.path.join(subfolder, 'phil.sh')
             with open(output_shell_path, 'w', newline='') as phil_shell:
@@ -399,39 +406,53 @@ def write_multi_phil(output_shell_lines, run_containers, all_subfolders, shell_b
     return output_shell_lines
 
 
-def gen_philosopher_lines(shell_template_lines, run_container: RunContainer, serial=False):
+def gen_philosopher_lines_no_template(run_container: RunContainer):
     """
-    Generate philosopher instructions for a provided subfolder and shell template
-    :param shell_template_lines: lines from standard template passed to run container
-    :param run_container: run container
-    :return: list of strings to append to file
+    Non-template version (generates all lines for greater flexibility) of gen_philosopher lines. Generates
+    shell script code to run philosopher according to provided parameters.
+    NOTE: improved serial runs set this to False and run the generated phil.sh file from the main script rather than writing
+    this to the main script
+    :param run_container: run parameter info
+    :type run_container: RunContainer
+    :return: void
+    :rtype:
     """
-    if serial:
-        output = []
+    output = ['#!/bin/bash\nset -xe\n\n']
+    output.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(run_container.subfolder)))
+    # add check to avoid running on empty directories and filling up /tmp/
+    output = check_empty_phil(output)
+    output.append('toolDirPath="{}"\n'.format(TOOL_DIR_PATH))
+    output.append('philosopherPath=$toolDirPath/philosopher\n')
+    output.append('fastaPath="{}"\n'.format(run_container.database_file))
+    output.append('$philosopherPath workspace --clean\n')
+    output.append('$philosopherPath workspace --init\n')
+    # initial pipeline run
+    if run_container.enzyme is '':
+        output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
     else:
-        output = ['#!/bin/bash\nset -xe\n\n']
-    if run_container.enzyme is not '':
-        output.append('cd {}\n'.format(PrepFraggerRuns.update_folder_linux(run_container.subfolder)))
-        # add check to avoid running on empty directories and filling up /tmp/
-        output = check_empty_phil(output)
+        # CANNOT run pipeline for multi-enzyme data because it doesn't expect multiple interact.pep.xml files. Run manually
+        print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
+        output.append('fastaPath="{}"\n'.format(run_container.database_file))
+        output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix\n')
+        output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml\n')
+        output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models\n')
+        output.append('$philosopherPath report --decoys\n')
 
-    for line in shell_template_lines:
-        if line.startswith('toolDirPath') or line.startswith('philosopherPath') or line.startswith('$philosopherPath'):
-            if line.startswith('$philosopherPath pipeline'):
-                if run_container.enzyme is '':
-                    output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
-                else:
-                    # CANNOT run pipeline for multi-enzyme data because it doesn't expect multiple interact.pep.xml files. Run manually
-                    print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
-                    output.append('fastaPath="{}"\n'.format(run_container.database_file))
-                    output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix\n')
-                    output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml\n')
-                    output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models\n')
-                    output.append('$philosopherPath report --decoys\n')
-            else:
-                output.append(line)
-        if line.startswith('analysisName') or line.startswith('cp ') or line.startswith('mv ') or line.startswith('decoy'):
-            output.append(line)
+    # PTMProphet check
+    if RUN_PTMPROPHET:
+        output.append('index=1\n')
+        output.append('while [ ! -e ./interact.mod.pep.xml ]; do \n')
+        output.append('\tif [ $index -lt 4 ]; then\n')
+        output.append('\t\t$philosopherPath pipeline --config ./philosopher_noPepProph.yml ./ |& tee phil_ptmp-rerun_${index}.log\n')
+        output.append('\t\tindex=$((index + 1))\n')
+        output.append('\tfi \n')
+        output.append('done \n')
+
+    output.append('analysisName=${PWD##*/}\n')
+    output.append('cp ./psm.tsv ../${analysisName}_psm.tsv\n')
+    output.append('cp ./peptide.tsv ../${analysisName}_peptide.tsv\n')
+    output.append('cp ./protein.tsv ../${analysisName}_protein.tsv\n')
+    output.append('cp ./ion.tsv ../${analysisName}_ion.tsv\n')
     return output
 
 
@@ -526,18 +547,18 @@ def make_yml_peptideproph_only(yml_base, database_path, enzyme, output_subfolder
     return new_path
 
 
-def get_raw_folder(pathraw_file):
-    """
-    Get the specified raw dir from a pathraw file (text with nothing but the raw linux path)
-    :param pathraw_file: template file
-    :return: raw file path string
-    """
-    raw_name = os.path.basename(os.path.splitext(pathraw_file)[0])
-    with open(pathraw_file, 'r') as readfile:
-        line = readfile.readline()
-        if line.endswith('\n'):
-            line = line.rstrip('\n')
-        return line, raw_name
+# def get_raw_folder(pathraw_file):
+#     """
+#     Get the specified raw dir from a pathraw file (text with nothing but the raw linux path)
+#     :param pathraw_file: template file
+#     :return: raw file path string
+#     """
+#     raw_name = os.path.basename(os.path.splitext(pathraw_file)[0])
+#     with open(pathraw_file, 'r') as readfile:
+#         line = readfile.readline()
+#         if line.endswith('\n'):
+#             line = line.rstrip('\n')
+#         return line, raw_name
 
 
 def gen_single_shell_activation(run_container: RunContainer, write_output, run_philosopher):
@@ -557,16 +578,13 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
     phil_shell_name = os.path.join(subfolder, 'phil.sh')
     shell_lines = PrepFraggerRuns.read_shell(run_container.shell_template)
     output = []
-    phil_output = []
+    phil_output = gen_philosopher_lines_no_template(run_container)
 
     # add a 'cd' to allow pasting together
     linux_folder = PrepFraggerRuns.update_folder_linux(subfolder)
     if write_output:
         output.append('#!/bin/bash\nset -xe\n\n')
-        phil_output.append('#!/bin/bash\nset -x\n\n')
     output.append('# Change dir to local workspace\ncd {}\n'.format(linux_folder))
-    phil_output.append('# Change dir to local workspace\ncd {}\n'.format(linux_folder))
-    phil_output = check_empty_phil(phil_output)
 
     skip_counter = 0
     for line in shell_lines:
@@ -583,10 +601,8 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
         if line.startswith('fasta'):
             if run_container.enzyme is not '':
                 output.append('fastaPath="../{}"\n'.format(run_container.database_file))
-                phil_output.append('fastaPath="../{}"\n'.format(run_container.database_file))
             else:
                 output.append('fastaPath="{}"\n'.format(run_container.database_file))
-                phil_output.append('fastaPath="{}"\n'.format(run_container.database_file))
         elif line.startswith('fraggerParams'):
             output.append('fraggerParamsPath="./{}"\n'.format(os.path.basename(run_container.param_file)))
             # output.append('fraggerParamsPath="{}"\n'.format(PrepFraggerRuns.update_folder_linux(run_container.param_file)))
@@ -620,21 +636,16 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
         elif line.startswith('$philosopherPath pipeline'):
             if run_philosopher:
                 output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
-                phil_output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
         elif line.startswith('$philosopherPath'):
             if run_philosopher:
                 output.append(line)
-                phil_output.append(line)
         elif line.startswith('analysisName') or line.startswith('cp ' or line.startswith('mv ')):
             if run_philosopher:
                 output.append(line)
-                phil_output.append(line)
         elif line.startswith('philosopherPath'):
             output.append(line)
-            phil_output.append(line)
         elif line.startswith('toolDirPath'):
             output.append(line)
-            phil_output.append(line)
         else:
             output.append(line)
 
@@ -642,7 +653,6 @@ def gen_single_shell_activation(run_container: RunContainer, write_output, run_p
         # add peptide prophet run and moving out of subfolder. NOTE: only add pep prophet run if this is the LAST activation type (otherwise will create redundant runs)
         if run_container.is_last_activation_type:
             output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config philosopher.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
-        phil_output.append('$philosopherPath workspace --clean\n$philosopherPath workspace --init\n$philosopherPath pipeline --config philosopher.yml ./\nanalysisName=${PWD##*/}\nmv ./interact.pep.xml ../${analysisName}_interact.pep.xml\n\n')
 
     if write_output:
         with open(new_shell_name, 'w', newline='') as shellfile:

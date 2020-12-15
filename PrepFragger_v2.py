@@ -45,7 +45,7 @@ FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201214_firstAllowed-PTV3.one-jar.jar'
 # USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
 USE_BATCH = False
 
-FRAGGER_MEM = 450
+FRAGGER_MEM = 400
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.mgf'
 # RAW_FORMAT = '.d'
@@ -65,8 +65,8 @@ TMTI_MODS = 'S[167], T[181], Y[243], K[170], K[471]'
 # JAVA_TO_USE = 'java'        # use default java
 JAVA_TO_USE = '/storage/dpolasky/tools/bin/jdk-14.0.2/bin/java'        # java 14 = fast
 
-# SERIAL_PHILOSOPHER = False
-SERIAL_PHILOSOPHER = True      # set True if using very large data (e.g. 10M or more PSMs), as Philosopher will use too much memory and crash if multithreaded
+SERIAL_PHILOSOPHER = False
+# SERIAL_PHILOSOPHER = True      # Serial philosopher is more convenient in most cases, but CANNOT be used with multi-activation or enzyme methods (as these need all runs to finish for combined phil runs)
 
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 # RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (search is still run in raw dir, so will overwrite)
@@ -341,6 +341,8 @@ def gen_multilevel_shell(run_containers, main_dir, run_folders=None):
 
         if SERIAL_PHILOSOPHER:
             # new serial philosopher mode - start run after each fragger run, but in parallel so next run can continue
+            if run_container.activation_type is not '' or run_container.enzyme is not '':
+                print('WARNING: serial philosopher run for multi-activation or enzyme run...Philosopher may be called multiple times on same files while still running! Use non-serial mode for these analyses')
             subfolder = get_final_subfolder_linux(run_container)
             output_shell_lines.append('#Run philosopher\n{}/phil.sh &> {}/phil.log &\n\n'.format(subfolder, subfolder))
         else:
@@ -437,6 +439,8 @@ def gen_philosopher_lines_no_template(run_container: RunContainer):
     output.append('$philosopherPath workspace --clean\n')
     output.append('$philosopherPath workspace --init\n')
     # initial pipeline run
+    if RUN_PTMPROPHET:      # turn off stop-on-crash if running PTM-P because we need it to re-try
+        output.append('set +e\n')
     if run_container.enzyme is '':
         output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
     else:
@@ -451,12 +455,11 @@ def gen_philosopher_lines_no_template(run_container: RunContainer):
     # PTMProphet check
     if RUN_PTMPROPHET:
         output.append('index=1\n')
-        output.append('while [ ! -e ./interact.mod.pep.xml ]; do \n')
-        output.append('\tif [ $index -lt 4 ]; then\n')
-        output.append('\t\t$philosopherPath pipeline --config ./philosopher_toolsDisabled.yml ./ |& tee phil_ptmp-rerun_${index}.log\n')
-        output.append('\t\tindex=$((index + 1))\n')
-        output.append('\tfi \n')
+        output.append('while [[ $index -lt 3 && (! -e ./interact.mod.pep.xml) ]]; do\n')
+        output.append('\t$philosopherPath pipeline --config ./philosopher_toolsDisabled.yml ./ |& tee phil_ptmp-rerun_${index}.log\n')
+        output.append('\tindex=$((index + 1))\n')
         output.append('done \n')
+        output.append('set -e\n')       # turn stop-on-error back on to catch fragger errors/etc in the next analysis
 
     output.append('analysisName=${PWD##*/}\n')
     output.append('cp ./psm.tsv ../${analysisName}_psm.tsv\n')

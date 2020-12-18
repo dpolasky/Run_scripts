@@ -38,14 +38,17 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-3.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201210_putToVar3.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201214_firstAllowed-PTV3.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201218_pvt3-FCfix.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201216_firstAllowed-PTV3-fixed.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.2-rc2_20201116.one-jar.jar'
 
 # USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
 USE_BATCH = False
 
-FRAGGER_MEM = 400
+# SERIAL_PHILOSOPHER = False
+SERIAL_PHILOSOPHER = True      # Serial philosopher is more convenient in most cases, but CANNOT be used with multi-activation or enzyme methods (as these need all runs to finish for combined phil runs)
+
+FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.mgf'
 # RAW_FORMAT = '.d'
@@ -64,9 +67,6 @@ TMTI_MODS = 'S[167], T[181], Y[243], K[170], K[471]'
 
 # JAVA_TO_USE = 'java'        # use default java
 JAVA_TO_USE = '/storage/dpolasky/tools/bin/jdk-14.0.2/bin/java'        # java 14 = fast
-
-SERIAL_PHILOSOPHER = False
-# SERIAL_PHILOSOPHER = True      # Serial philosopher is more convenient in most cases, but CANNOT be used with multi-activation or enzyme methods (as these need all runs to finish for combined phil runs)
 
 RUN_IN_PROGRESS = ''  # to avoid overwriting multi.sh
 # RUN_IN_PROGRESS = '2'     # NOTE - DO NOT RUN MULTIPLE SEARCHES ON THE SAME RAW DATA AT THE SAME TIME (search is still run in raw dir, so will overwrite)
@@ -455,7 +455,7 @@ def gen_philosopher_lines_no_template(run_container: RunContainer):
     # PTMProphet check
     if RUN_PTMPROPHET:
         output.append('index=1\n')
-        output.append('while [[ $index -lt 3 && (! -e ./interact.mod.pep.xml) ]]; do\n')
+        output.append('while [[ $index -lt 5 && (! -e ./interact.mod.pep.xml) ]]; do\n')
         output.append('\t$philosopherPath pipeline --config ./philosopher_toolsDisabled.yml ./ |& tee phil_ptmp-rerun_${index}.log\n')
         output.append('\tindex=$((index + 1))\n')
         output.append('done \n')

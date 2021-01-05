@@ -57,6 +57,8 @@ RAW_FORMAT = '.mzML'
 RUN_TMTI = False
 RUN_PTMPROPHET = True
 # RUN_PTMPROPHET = False
+PTMPROPHET_MANUAL = True    # run PTMProphet directly, NOT through Philosopher. Requires a bunch of extra steps. Needed for hybrid data (>1 ion type)
+PTMPROPHET_PARSER_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\PTMProphetParser"
 # QUANT_COPY_ANNOTATION_FILE = True
 QUANT_COPY_ANNOTATION_FILE = False
 # if QUANT_COPY_ANNOTATION_FILE or RUN_PTMPROPHET or RUN_TMTI:
@@ -245,7 +247,7 @@ def generate_single_run(base_param_path, yml_file, raw_path, shell_template, mai
         edit_yml(yml_output_path, db_file)
         if annotation_path is not '':
             shutil.copy(annotation_path, os.path.join(param_subfolder, os.path.basename(annotation_path)))
-        if RUN_PTMPROPHET:
+        if RUN_PTMPROPHET and not PTMPROPHET_MANUAL:
             copy_yml_disable_tools(yml_output_path, ['peptide'], param_subfolder)
         # symlink raw files for downstream tools - doesn't work if running philosopher on linux because these are windows symlinks...
         # symlink_raw_files(param_subfolder, raw_path, RAW_FORMAT, activation_type, '')
@@ -442,7 +444,12 @@ def gen_philosopher_lines_no_template(run_container: RunContainer):
     if RUN_PTMPROPHET:      # turn off stop-on-crash if running PTM-P because we need it to re-try
         output.append('set +e\n')
     if run_container.enzyme is '':
-        output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
+        if PTMPROPHET_MANUAL:
+            # run peptideProphet only first to prepare for PTMP run
+            pep_proph_config = copy_yml_disable_tools(run_container.yml_file, [], run_container.subfolder, only_run_tools=['peptide'])
+            output.append('$philosopherPath pipeline --config {} ./\n'.format(pep_proph_config))
+        else:
+            output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
     else:
         # CANNOT run pipeline for multi-enzyme data because it doesn't expect multiple interact.pep.xml files. Run manually
         print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
@@ -454,12 +461,25 @@ def gen_philosopher_lines_no_template(run_container: RunContainer):
 
     # PTMProphet check
     if RUN_PTMPROPHET:
-        output.append('index=1\n')
-        output.append('while [[ $index -lt 5 && (! -e ./interact.mod.pep.xml) ]]; do\n')
-        output.append('\t$philosopherPath pipeline --config ./philosopher_toolsDisabled.yml ./ |& tee phil_ptmp-rerun_${index}.log\n')
-        output.append('\tindex=$((index + 1))\n')
-        output.append('done \n')
-        output.append('set -e\n')       # turn stop-on-error back on to catch fragger errors/etc in the next analysis
+        if PTMPROPHET_MANUAL:
+            # peptide prophet running done above, so run PTMProphet (manually), then run the rest of Philosopher pipeline
+            # copy PTMProphetParser to dir
+            output.append('cp {} ./\n'.format(PrepFraggerRuns.update_folder_linux(PTMPROPHET_PARSER_PATH)))
+            # set up PTMP options and specify path to .interact.pep.xml (assumes this is the output from peptide prophet)
+            ptmp_options = get_ptmprophet_options_from_yml(run_container.yml_file)
+            ptmp_command = './{} {} {}\n'.format(os.path.basename(PTMPROPHET_PARSER_PATH), ptmp_options, './interact.pep.xml')
+            output.append(ptmp_command)     # PTMP command
+            # rest of philosopher
+            updated_yml = copy_yml_disable_tools(run_container.yml_file, ['peptide', 'ptmp'], run_container.subfolder)
+            output.append('$philosopherPath pipeline --config ./philosopher_toolsDisabled.yml ./\n')
+            output.append('rm ./{}\n'.format(os.path.basename(PTMPROPHET_PARSER_PATH)))
+        else:
+            output.append('index=1\n')
+            output.append('while [[ $index -lt 5 && (! -e ./interact.mod.pep.xml) ]]; do\n')
+            output.append('\t$philosopherPath pipeline --config ./philosopher_toolsDisabled.yml ./ |& tee phil_ptmp-rerun_${index}.log\n')
+            output.append('\tindex=$((index + 1))\n')
+            output.append('done \n')
+            output.append('set -e\n')       # turn stop-on-error back on to catch fragger errors/etc in the next analysis
 
     output.append('analysisName=${PWD##*/}\n')
     output.append('cp ./psm.tsv ../${analysisName}_psm.tsv\n')
@@ -467,6 +487,55 @@ def gen_philosopher_lines_no_template(run_container: RunContainer):
     output.append('cp ./protein.tsv ../${analysisName}_protein.tsv\n')
     output.append('cp ./ion.tsv ../${analysisName}_ion.tsv\n')
     return output
+
+
+def get_ptmprophet_options_from_yml(yml_file):
+    """
+    Generate the command line options for PTMProphet from the yml file
+    :param yml_file: full path to file to parse (assumed linux path)
+    :type yml_file: str
+    :return: formatted command line option string
+    :rtype: str
+    """
+    # read file
+    outputs = []
+    with open(PrepFraggerRuns.update_folder_windows(yml_file), 'r') as readfile:
+        for line in list(readfile):
+            if line.startswith('  cions'):
+                value = line.split(':')[1].split('#')[0].strip()
+                if value is not '':
+                    outputs.append('CIONS={}'.format(value))
+            elif line.startswith('  nions'):
+                value = line.split(':')[1].split('#')[0].strip()
+                if value is not '':
+                    outputs.append('NIONS={}'.format(value))
+            elif line.startswith('  em'):
+                value = line.split(':')[1].split('#')[0].strip()
+                outputs.append('EM={}'.format(value))
+            elif line.startswith('  static'):
+                value = line.split(':')[1].split('#')[0].strip()
+                if value == 'true':
+                    outputs.append('STATIC')
+            elif line.startswith('  fragppmtol'):
+                value = line.split(':')[1].split('#')[0].strip()
+                outputs.append('FRAGPPMTOL={}'.format(value))
+            elif line.startswith('  lability'):
+                value = line.split(':')[1].split('#')[0].strip()
+                if value == 'true':
+                    outputs.append('LABILITY')
+            elif line.startswith('  ppmtol'):
+                value = line.split(':')[1].split('#')[0].strip()
+                outputs.append('PPMTOL={}'.format(value))
+            elif line.startswith('  minprob'):
+                value = line.split(':')[1].split('#')[0].strip()
+                outputs.append('MINPROB={}'.format(value))
+            elif line.startswith('  maxthreads'):
+                value = line.split(':')[1].split('#')[0].strip()
+                outputs.append('MAXTHREADS={}'.format(value))
+            elif line.startswith('  mods'):
+                value = ':'.join(line.split(':')[1:]).split('#')[0].strip()
+                outputs.append('{}'.format(value))
+    return ' '.join(outputs)
 
 
 def edit_yml(yml_file, database_path, disable_peptide_prophet=False):
@@ -578,7 +647,7 @@ def make_yml_peptideproph_only(yml_base, database_path, enzyme, output_subfolder
     return new_path
 
 
-def copy_yml_disable_tools(existing_formatted_yml, tools_to_disable, output_subfolder):
+def copy_yml_disable_tools(existing_formatted_yml, tools_to_disable, output_subfolder, only_run_tools=None):
     """
     Make a copy of the existing yml file with the specified tools disabled. NOTE: assumes v4 Philosopher yml
     :param existing_formatted_yml: existing yml (NOT template - actual file in the subfolder) to copy (path)
@@ -587,30 +656,57 @@ def copy_yml_disable_tools(existing_formatted_yml, tools_to_disable, output_subf
     :type tools_to_disable: list
     :param output_subfolder: where to save
     :type output_subfolder: str
-    :return: void
-    :rtype:
+    :param only_run_tools: if specified, ONLY run the specified tools (disable all others). OVERRIDES tools_to_disable
+    :type only_run_tools: list
+    :return: path to updated config file
+    :rtype: str
     """
     lines = []
-    allowed_tools = ['peptide', 'ptmp']
+    allowed_tools = ['peptide', 'ptmp', 'protein', 'lfq', 'labelq', 'fdr', 'report']
+    if only_run_tools is not None:
+        # disable all except the specified tool(s)
+        tools_to_disable = [x for x in allowed_tools if x not in only_run_tools]
+
+    # make sure we've implemented all requested tools
     for tool in tools_to_disable:
         if tool not in allowed_tools:
             print('ERROR: tool {} is not implemented for yml disabling - please fix or implement'.format(tool))
 
-    with open(existing_formatted_yml, 'r') as readfile:
+    with open(PrepFraggerRuns.update_folder_windows(existing_formatted_yml), 'r') as readfile:
         for line in list(readfile):
             if line.startswith('  Peptide Validation'):
                 if 'peptide' in tools_to_disable:
                     line = '  Peptide Validation: no\n'
-                elif line.startswith('  PTM Localization'):
-                    if 'ptmp' in tools_to_disable:
-                        line = '  PTM Localization: no\n'
+            elif line.startswith('  PTM Localization'):
+                if 'ptmp' in tools_to_disable:
+                    line = '  PTM Localization: no\n'
+            elif line.startswith('  Protein Inference'):
+                if 'protein' in tools_to_disable:
+                    line = '  Protein Inference: no\n'
+            elif line.startswith('  Label-Free Quantification'):
+                if 'lfq' in tools_to_disable:
+                    line = '  Label-Free Quantification: no\n'
+            elif line.startswith('  Individual Reports'):
+                if 'report' in tools_to_disable:
+                    line = '  Individual Reports: no\n'
+            elif line.startswith('  Isobaric Quantification'):
+                if 'labelq' in tools_to_disable:
+                    line = '  Isobaric Quantification: no\n'
+            elif line.startswith('  FDR Filtering'):
+                if 'fdr' in tools_to_disable:
+                    line = '  FDR Filtering: no\n'
             lines.append(line)
 
     # write output
-    new_path = os.path.join(output_subfolder, os.path.basename('philosopher_toolsDisabled.yml'))
+    if only_run_tools is not None:
+        new_path = os.path.join(output_subfolder, os.path.basename('philosopher_onlyTools.yml'))    # different path so can use both in one run
+    else:
+        new_path = os.path.join(output_subfolder, os.path.basename('philosopher_toolsDisabled.yml'))
     with open(new_path, 'w') as outfile:
         for line in lines:
             outfile.write(line)
+    return PrepFraggerRuns.update_folder_linux(new_path)
+
 
 # def get_raw_folder(pathraw_file):
 #     """

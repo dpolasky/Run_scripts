@@ -45,8 +45,8 @@ FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201218_pvt3-FCfix.one-jar.jar'
 # USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
 USE_BATCH = False
 
-# SERIAL_PHILOSOPHER = False
-SERIAL_PHILOSOPHER = True      # Serial philosopher is more convenient in most cases, but CANNOT be used with multi-activation or enzyme methods (as these need all runs to finish for combined phil runs)
+SERIAL_PHILOSOPHER = False
+# SERIAL_PHILOSOPHER = True      # Serial philosopher is more convenient in most cases, but CANNOT be used with multi-activation or enzyme methods (as these need all runs to finish for combined phil runs)
 
 FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
@@ -55,8 +55,8 @@ RAW_FORMAT = '.mzML'
 
 # RUN_TMTI = True     # run TMT-integrator
 RUN_TMTI = False
-RUN_PTMPROPHET = True
-# RUN_PTMPROPHET = False
+# RUN_PTMPROPHET = True
+RUN_PTMPROPHET = False
 PTMPROPHET_MANUAL = True    # run PTMProphet directly, NOT through Philosopher. Requires a bunch of extra steps. Needed for hybrid data (>1 ion type)
 PTMPROPHET_PARSER_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\PTMProphetParser"
 # QUANT_COPY_ANNOTATION_FILE = True
@@ -410,7 +410,7 @@ def write_multi_phil(output_shell_lines, run_containers, all_subfolders):
                 if run_container.subfolder == subfolder:
                     current_container = run_container
                     break
-            phil_lines = gen_philosopher_lines_no_template(current_container)
+            phil_lines = gen_philosopher_lines_no_template(current_container, outer_shell=True)
             # save phil.sh to each subfolder so the multithreaded philosopher shell code above has a phil.sh file to find
             output_shell_path = os.path.join(subfolder, 'phil.sh')
             with open(output_shell_path, 'w', newline='') as phil_shell:
@@ -420,7 +420,7 @@ def write_multi_phil(output_shell_lines, run_containers, all_subfolders):
     return output_shell_lines
 
 
-def gen_philosopher_lines_no_template(run_container: RunContainer):
+def gen_philosopher_lines_no_template(run_container: RunContainer, outer_shell=False):
     """
     Non-template version (generates all lines for greater flexibility) of gen_philosopher lines. Generates
     shell script code to run philosopher according to provided parameters.
@@ -428,6 +428,8 @@ def gen_philosopher_lines_no_template(run_container: RunContainer):
     this to the main script
     :param run_container: run parameter info
     :type run_container: RunContainer
+    :param outer_shell: specify if running from the outer folder in multi-enzyme mode (the second philosopher shell) to hard code the proteinProphet/etc commands instead of using pipeline
+    :type outer_shell: bool
     :return: void
     :rtype:
     """
@@ -451,13 +453,18 @@ def gen_philosopher_lines_no_template(run_container: RunContainer):
         else:
             output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.yml_file))
     else:
-        # CANNOT run pipeline for multi-enzyme data because it doesn't expect multiple interact.pep.xml files. Run manually
-        print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
-        output.append('fastaPath="{}"\n'.format(run_container.database_file))
-        output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix\n')
-        output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml\n')
-        output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models\n')
-        output.append('$philosopherPath report --decoys\n')
+        if not outer_shell:
+            # inner (enzyme) folder phil shell just uses pipeline (standard behavior)
+            output.append('$philosopherPath pipeline --config {} ./\n'.format(run_container.enzyme_yml_path))
+        else:
+            # CANNOT run pipeline for multi-enzyme data because it doesn't expect multiple interact.pep.xml files. Run manually
+            print('WARNING: protein prophet, filter, and report commands are hard-coded for multi-enzyme mode and will NOT be read from your yml')
+            output.append('fastaPath="{}"\n'.format(run_container.database_file))
+            output.append('decoyPrefix="rev_"\n')
+            output.append('$philosopherPath database --annotate $fastaPath --prefix $decoyPrefix\n')
+            output.append('$philosopherPath proteinprophet --maxppmdiff 2000000000 ./*.pep.xml\n')
+            output.append('$philosopherPath filter --sequential --razor --mapmods --pepxml . --protxml ./interact.prot.xml --models\n')
+            output.append('$philosopherPath report --decoys\n')
 
     # PTMProphet check
     if RUN_PTMPROPHET:

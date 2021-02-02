@@ -38,25 +38,25 @@ import EditParams
 # FRAGGER_JARNAME = 'msfragger-3.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201218_pvt3-FCfix.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201216_firstAllowed-PTV3-fixed.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201218_pvt3-FCfix.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-3.2-rc8_20210201_fixPVT3bug.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.2-rc2_20201116.one-jar.jar'
 
 # USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
 USE_BATCH = False
 
-SERIAL_PHILOSOPHER = False
-# SERIAL_PHILOSOPHER = True      # Serial philosopher is more convenient in most cases, but CANNOT be used with multi-activation or enzyme methods (as these need all runs to finish for combined phil runs)
+# SERIAL_PHILOSOPHER = False
+SERIAL_PHILOSOPHER = True      # Serial philosopher is more convenient in most cases, but CANNOT be used with multi-activation or enzyme methods (as these need all runs to finish for combined phil runs)
 
-FRAGGER_MEM = 200
+FRAGGER_MEM = 400
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.mgf'
 # RAW_FORMAT = '.d'
 
 # RUN_TMTI = True     # run TMT-integrator
 RUN_TMTI = False
-# RUN_PTMPROPHET = True
-RUN_PTMPROPHET = False
+RUN_PTMPROPHET = True
+# RUN_PTMPROPHET = False
 PTMPROPHET_MANUAL = True    # run PTMProphet directly, NOT through Philosopher. Requires a bunch of extra steps. Needed for hybrid data (>1 ion type)
 PTMPROPHET_PARSER_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\PTMProphetParser"
 # QUANT_COPY_ANNOTATION_FILE = True
@@ -446,7 +446,7 @@ def gen_philosopher_lines_no_template(run_container: RunContainer, outer_shell=F
     if RUN_PTMPROPHET:      # turn off stop-on-crash if running PTM-P because we need it to re-try
         output.append('set +e\n')
     if run_container.enzyme is '':
-        if PTMPROPHET_MANUAL:
+        if PTMPROPHET_MANUAL and RUN_PTMPROPHET:
             # run peptideProphet only first to prepare for PTMP run
             pep_proph_config = copy_yml_disable_tools(run_container.yml_file, [], run_container.subfolder, only_run_tools=['peptide'])
             output.append('$philosopherPath pipeline --config {} ./\n'.format(pep_proph_config))
@@ -542,6 +542,16 @@ def get_ptmprophet_options_from_yml(yml_file):
             elif line.startswith('  mods'):
                 value = ':'.join(line.split(':')[1:]).split('#')[0].strip()
                 outputs.append('{}'.format(value))
+            elif line.startswith('  massdiffmode'):
+                value = line.split(':')[1].split('#')[0].strip()
+                if value == 'true':
+                    outputs.append('MASSDIFFMODE')
+            elif line.startswith('  excludemassdiffmin'):
+                value = line.split(':')[1].split('#')[0].strip()
+                outputs.append('EXCLUDEMASSDIFFMIN={}'.format(value))
+            elif line.startswith('  excludemassdiffmax'):
+                value = line.split(':')[1].split('#')[0].strip()
+                outputs.append('EXCLUDEMASSDIFFMAX={}'.format(value))
     return ' '.join(outputs)
 
 

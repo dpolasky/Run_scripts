@@ -1,0 +1,239 @@
+"""
+Utility for running FragPipe batches from headless mode using a template file (csv).
+Uses windows filechooser to select template file, but could generalize instead
+"""
+
+import tkinter
+from tkinter import filedialog
+import os
+
+FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
+# FRAGPIPE_PATH = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\MSFragger-GUI\build\install\fragpipe\bin\fragpipe.exe"
+USE_LINUX = True
+
+
+class FragpipeRun(object):
+    """
+    container for run info
+    """
+    workflow_path: str
+    manifest_path: str
+    output_path: str
+    ram: str
+    threads: str
+    msfragger_path: str
+    philosopher_path: str
+    python_path: str
+
+    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, python=None):
+        self.workflow_path = workflow
+        self.manifest_path = manifest
+        if output == '':
+            # use base workflow name automatically if no specific output name specified
+            self.output_path = os.path.basename(os.path.splitext(workflow)[0])
+        else:
+            self.output_path = output
+        self.ram = ram
+        self.threads = threads
+        self.msfragger_path = msfragger
+        self.philosopher_path = philosopher
+        if python is not None:
+            self.python_path = python
+
+    def update_linux(self):
+        """
+        update all paths to be linux-ized, AND update manifest file paths
+        :return: void
+        :rtype:
+        """
+        # update paths in specific files
+        self.manifest_path = update_manifest_linux(self.manifest_path)
+        update_workflow_linux(self.workflow_path)
+
+        # update the paths themselves
+        self.workflow_path = update_folder_linux(self.workflow_path)
+        self.manifest_path = update_folder_linux(self.manifest_path)
+        self.output_path = update_folder_linux(self.output_path)
+        self.msfragger_path = update_folder_linux(self.msfragger_path)
+        self.philosopher_path = update_folder_linux(self.philosopher_path)
+        if self.python_path is not None:
+            self.python_path = update_folder_linux(self.python_path)
+
+
+def update_manifest_linux(manifest_path):
+    """
+    update the manifest file to linux paths and save a copy, return the updated path to use as new manifest path
+    :param manifest_path: full path to manifest file
+    :type manifest_path: str
+    :return: updated path
+    :rtype: str
+    """
+    output = []
+    with open(manifest_path, 'r') as readfile:
+        for line in list(readfile):
+            newline = update_folder_linux(line)
+            output.append(newline)
+    pathsplits = os.path.splitext(manifest_path)
+    newpath = pathsplits[0] + '_linux' + pathsplits[1]
+    with open(newpath, 'w', newline='') as outfile:
+        for line in output:
+            outfile.write(line)
+    return newpath
+
+
+def update_workflow_linux(workflow_path):
+    """
+    update the path to the database file to linux path
+    :param workflow_path: path to workflow file
+    :type workflow_path: str
+    :return: void
+    :rtype:
+    """
+    output = []
+    # read to edit database path
+    with open(workflow_path, 'r') as readfile:
+        for line in list(readfile):
+            if line.startswith('database.db-path'):
+                newline = update_folder_linux(line)
+            else:
+                newline = line
+            output.append(newline)
+
+    # save output back to same path
+    with open(workflow_path, 'w') as outfile:
+        for line in output:
+            outfile.write(line)
+
+
+def parse_template(template_file):
+    """
+    read the template into a list of FragpipeRun containers
+    :param template_file: full path to template file to read
+    :type template_file: str
+    :return: list of FragpipeRun containers
+    :rtype: list[FragpipeRun]
+    """
+    runs = []
+    with open(template_file, 'r') as readfile:
+        for line in list(readfile):
+            if line.startswith('#'):
+                continue
+            splits = line.split(',')
+            this_run = FragpipeRun(*splits)
+            # update output_dir to full path (template has only the unique name, not the full path), and make dir if it doesn't exist
+            this_run.output_path = os.path.join(os.path.dirname(this_run.workflow_path), '__FraggerResults', this_run.output_path)
+            if not os.path.exists(this_run.output_path):
+                os.makedirs(this_run.output_path)
+            runs.append(this_run)
+    return runs
+
+
+def make_commands_linux(run_list, fragpipe_path, output_path):
+    """
+    Format commands and write to linux shell script from the provided run list
+    :param run_list: list of runs
+    :type run_list: list[FragpipeRun]
+    :param fragpipe_path: full path to fragpipe executable
+    :type fragpipe_path: str
+    :param output_path: full path to save output file
+    :type output_path: str
+    :return: void
+    :rtype:
+    """
+    batch_path = os.path.join(output_path, 'fragpipe_batch.sh')
+    linux_fragpipe = update_folder_linux(fragpipe_path)
+    with open(batch_path, 'w', newline='') as outfile:
+        outfile.write('#!/bin/bash\nset -xe\n\n')   # header
+        for fragpipe_run in run_list:
+            fragpipe_run.update_linux()
+            arg_list = [linux_fragpipe,
+                        fragpipe_run.workflow_path,
+                        fragpipe_run.manifest_path,
+                        fragpipe_run.output_path,
+                        fragpipe_run.ram,
+                        fragpipe_run.threads,
+                        fragpipe_run.msfragger_path,
+                        fragpipe_run.philosopher_path
+                        ]
+            outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {}\n'.format(*arg_list))
+
+
+def make_commands_windows(run_list, fragpipe_path, output_path):
+    """
+    Format commands and write to windows bat file from the provided run list
+    :param run_list: list of runs
+    :type run_list: list[FragpipeRun]
+    :param fragpipe_path: full path to fragpipe executable
+    :type fragpipe_path: str
+    :param output_path: full path to save output file
+    :type output_path: str
+    :return: void
+    :rtype:
+    """
+    batch_path = os.path.join(output_path, 'fragpipe_batch.bat')
+    with open(batch_path, 'w') as outfile:
+        for fragpipe_run in run_list:
+            arg_list = [fragpipe_path,
+                        fragpipe_run.workflow_path,
+                        fragpipe_run.manifest_path,
+                        fragpipe_run.output_path,
+                        fragpipe_run.ram,
+                        fragpipe_run.threads,
+                        fragpipe_run.msfragger_path,
+                        fragpipe_run.philosopher_path
+                        ]
+            outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {}\n'.format(*arg_list))
+
+
+def main(template_file, fragpipe_path, write_to_linux):
+    """
+    Run a FragPipe batch from the template file. Template format: workflow, manifest, output \n, one analysis per line.
+    Writes Windows batch file or linux shell script to run in the same path as the template file
+    :param template_file: full path to template file to read
+    :type template_file: str
+    :param fragpipe_path: full path to fragpipe executable
+    :type fragpipe_path: str
+    :param write_to_linux: if true, update paths to be linux output rather than windows
+    :type write_to_linux: bool
+    :return: void
+    :rtype:
+    """
+    run_list = parse_template(template_file)
+    output_dir = os.path.dirname(template_file)
+    if write_to_linux:
+        make_commands_linux(run_list, fragpipe_path, output_dir)
+    else:
+        make_commands_windows(run_list, fragpipe_path, output_dir)
+
+
+def update_folder_linux(folder_name):
+    """
+    helper to auto update windows directories to linux
+    :param folder_name: path to update
+    :return: updated path
+    """
+    if folder_name.startswith('//corexfs'):
+        linux_name = folder_name.replace('//corexfs.med.umich.edu/proteomics', '/storage')
+        linux_name = linux_name.replace('\\', '/')
+    elif folder_name.startswith('\\\\corexfs'):
+        folder_name = folder_name.replace('\\', '/')
+        linux_name = folder_name.replace('//corexfs.med.umich.edu/proteomics', '/storage')
+    elif folder_name.startswith('Z:'):
+        linux_name = folder_name.replace('Z:', '/storage')
+        linux_name = linux_name.replace('\\', '/')
+    elif 'Z\\:' in folder_name:
+        linux_name = folder_name.replace('Z\\:', '/storage')
+        linux_name = linux_name.replace('\\', '/')
+        linux_name = linux_name.replace('//', '/')
+    else:
+        linux_name = folder_name
+    return linux_name
+
+
+if __name__ == '__main__':
+    root = tkinter.Tk()
+    root.withdraw()
+
+    template = filedialog.askopenfilename(filetypes=[('FP Template', '.csv')])
+    main(template, FRAGPIPE_PATH, USE_LINUX)
+    print('Done!')

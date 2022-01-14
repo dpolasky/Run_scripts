@@ -23,12 +23,12 @@ class ActivationType(Enum):
     IRMPD = 6
 
 
-def filter_scans(mzml_file, exact_activation_list, output_dir):
+def filter_scans(mzml_file, exact_activation_list, output_append):
     """
     Remove scans matching the provided activation rule
     :param mzml_file: mzML file path
     :param exact_activation_list: list of ActivationType. Exact match required to ALL activation types specified
-    :param output_dir: where to save
+    :param output_append: what to add to the filename of the newly created file
     :return: void
     """
     print('loading file {}'.format(mzml_file))
@@ -63,9 +63,7 @@ def filter_scans(mzml_file, exact_activation_list, output_dir):
     print('{} spectra before, now {} spectra'.format(index + 1, len(filtered_spectra)))
     exp.setSpectra(filtered_spectra)
 
-    output_file = os.path.join(output_dir, os.path.basename(mzml_file))
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    output_file = os.path.splitext(mzml_file)[0] + output_append + '.mzML'
     pyopenms.MzMLFile().store(output_file, exp)
 
 
@@ -74,9 +72,6 @@ if __name__ == '__main__':
     root.withdraw()
 
     mzmls = filedialog.askopenfilenames(filetypes=[('mzML', '.mzml')])
-    main_dir = os.path.dirname(mzmls[0])
     for mzml in mzmls:
-        hcd_dir = os.path.join(main_dir, 'HCD')
-        filter_scans(mzml, [ActivationType.HCD], hcd_dir)    # keep HCD only (e.g. do on 'HCD' output of EThcD conversion to remove EThcD scans from the HCD file)
-        # ethcd_dir = os.path.join(main_dir, 'EThcD')
-        # filter_scans(mzml, [ActivationType.HCD, ActivationType.ETD], ethcd_dir)    # EThcD only
+        filter_scans(mzml, [ActivationType.HCD], 'HCD')    # keep HCD only (e.g. do on 'HCD' output of EThcD conversion to remove EThcD scans from the HCD file)
+        # filter_scans(mzml, [ActivationType.HCD, ActivationType.ETD], 'EThcD')    # EThcD only

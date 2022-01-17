@@ -6,6 +6,7 @@ Uses windows filechooser to select template file, but could generalize instead
 import tkinter
 from tkinter import filedialog
 import os
+import shutil
 
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
 # FRAGPIPE_PATH = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\MSFragger-GUI\build\install\fragpipe\bin\fragpipe.exe"
@@ -124,6 +125,8 @@ def parse_template(template_file):
             this_run.output_path = os.path.join(os.path.dirname(this_run.workflow_path), '__FraggerResults', this_run.output_path)
             if not os.path.exists(this_run.output_path):
                 os.makedirs(this_run.output_path)
+            # copy workflow file to output dir (for later reference)
+            shutil.copy(this_run.workflow_path, os.path.join(this_run.output_path, os.path.basename(this_run.workflow_path)))
             runs.append(this_run)
     return runs
 
@@ -223,6 +226,10 @@ def update_folder_linux(folder_name):
         linux_name = linux_name.replace('\\', '/')
     elif 'Z\\:' in folder_name:
         linux_name = folder_name.replace('Z\\:', '/storage')
+        linux_name = linux_name.replace('\\', '/')
+        linux_name = linux_name.replace('//', '/')
+    elif 'C\\:' in folder_name:
+        linux_name = folder_name.replace('C\\:', '/storage')
         linux_name = linux_name.replace('\\', '/')
         linux_name = linux_name.replace('//', '/')
     else:

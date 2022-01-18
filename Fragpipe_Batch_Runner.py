@@ -7,10 +7,32 @@ import tkinter
 from tkinter import filedialog
 import os
 import shutil
+from enum import Enum
+
 
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
 # FRAGPIPE_PATH = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\MSFragger-GUI\build\install\fragpipe\bin\fragpipe.exe"
 USE_LINUX = True
+# DISABLE_TOOLS = True
+DISABLE_TOOLS = False
+
+
+class DisableTools(Enum):
+    """
+    tool names that match the run-[TOOL] format of the workflow parameters
+    """
+    MSFRAGGER = 'msfragger'
+    PROTEINPROPHET = 'protein-prophet'
+    PEPTIDEPROPHET = 'peptide-prophet'
+    PTMPROPHET = 'ptmprophet'
+    PTMSHEPHERD = 'shepherd'
+    VALIDATION = 'psm-validation'
+    TMTINTEGRATOR = 'tmtintegrator'
+
+
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
+if not DISABLE_TOOLS:
+    TOOLS_TO_DISABLE = None
 
 
 class FragpipeRun(object):
@@ -26,20 +48,33 @@ class FragpipeRun(object):
     philosopher_path: str
     python_path: str
 
-    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, python=None):
-        self.workflow_path = workflow
-        self.manifest_path = manifest
+    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, disable_list=None, python=None):
         if output == '':
             # use base workflow name automatically if no specific output name specified
-            self.output_path = os.path.basename(os.path.splitext(workflow)[0])
+            output_name = os.path.basename(os.path.splitext(workflow)[0])
         else:
-            self.output_path = output
+            output_name = output
+
+        # update output_dir to full path (template has only the unique name, not the full path), and make dir if it doesn't exist
+        self.output_path = os.path.join(os.path.dirname(workflow), '__FraggerResults', output_name)
+        if not os.path.exists(self.output_path):
+            os.makedirs(self.output_path)
+
+        # copy workflow file to output dir (for later reference)
+        self.workflow_path = os.path.join(self.output_path, os.path.basename(workflow))
+        shutil.copy(workflow, self.workflow_path)
+
+        self.manifest_path = manifest
         self.ram = ram
         self.threads = threads
         self.msfragger_path = msfragger
         self.philosopher_path = philosopher
         if python is not None:
             self.python_path = python
+        else:
+            self.python_path = None
+        if disable_list is not None:
+            edit_workflow_disable_tools(self.workflow_path, disable_list)
 
     def update_linux(self):
         """
@@ -82,6 +117,31 @@ def update_manifest_linux(manifest_path):
     return newpath
 
 
+def edit_workflow_disable_tools(workflow_path, disable_list):
+    """
+    Edit the workflow file to change the specified tools to not be run
+    :param workflow_path: full path to workflow file
+    :type workflow_path: str
+    :param disable_list: list of tool names to disable (specified in Enum)
+    :type disable_list: list
+    :return: void
+    :rtype:
+    """
+    output = []
+    with open(workflow_path, 'r') as readfile:
+        for line in list(readfile):
+            newline = line
+            for tool_name in disable_list:
+                if 'run-{}'.format(tool_name.value) in line:
+                    # change to false
+                    splits = line.split('=')
+                    newline = splits[0] + '=false\n'
+            output.append(newline)
+    with open(workflow_path, 'w') as outfile:
+        for line in output:
+            outfile.write(line)
+
+
 def update_workflow_linux(workflow_path):
     """
     update the path to the database file to linux path
@@ -106,11 +166,13 @@ def update_workflow_linux(workflow_path):
             outfile.write(line)
 
 
-def parse_template(template_file):
+def parse_template(template_file, disable_list):
     """
     read the template into a list of FragpipeRun containers
     :param template_file: full path to template file to read
     :type template_file: str
+    :param disable_list: list of tool names to disable (specified in Enum)
+    :type disable_list: list
     :return: list of FragpipeRun containers
     :rtype: list[FragpipeRun]
     """
@@ -119,14 +181,8 @@ def parse_template(template_file):
         for line in list(readfile):
             if line.startswith('#'):
                 continue
-            splits = line.split(',')
-            this_run = FragpipeRun(*splits)
-            # update output_dir to full path (template has only the unique name, not the full path), and make dir if it doesn't exist
-            this_run.output_path = os.path.join(os.path.dirname(this_run.workflow_path), '__FraggerResults', this_run.output_path)
-            if not os.path.exists(this_run.output_path):
-                os.makedirs(this_run.output_path)
-            # copy workflow file to output dir (for later reference)
-            shutil.copy(this_run.workflow_path, os.path.join(this_run.output_path, os.path.basename(this_run.workflow_path)))
+            splits = [x for x in line.split(',') if x is not '\n']
+            this_run = FragpipeRun(*splits, disable_list=disable_list)
             runs.append(this_run)
     return runs
 
@@ -188,7 +244,7 @@ def make_commands_windows(run_list, fragpipe_path, output_path):
             outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {}\n'.format(*arg_list))
 
 
-def main(template_file, fragpipe_path, write_to_linux):
+def main(template_file, fragpipe_path, write_to_linux, disable_list):
     """
     Run a FragPipe batch from the template file. Template format: workflow, manifest, output \n, one analysis per line.
     Writes Windows batch file or linux shell script to run in the same path as the template file
@@ -196,12 +252,14 @@ def main(template_file, fragpipe_path, write_to_linux):
     :type template_file: str
     :param fragpipe_path: full path to fragpipe executable
     :type fragpipe_path: str
+    :param disable_list: list of tool names to disable (specified in Enum)
+    :type disable_list: list
     :param write_to_linux: if true, update paths to be linux output rather than windows
     :type write_to_linux: bool
     :return: void
     :rtype:
     """
-    run_list = parse_template(template_file)
+    run_list = parse_template(template_file, disable_list)
     output_dir = os.path.dirname(template_file)
     if write_to_linux:
         make_commands_linux(run_list, fragpipe_path, output_dir)
@@ -242,5 +300,5 @@ if __name__ == '__main__':
     root.withdraw()
 
     template = filedialog.askopenfilename(filetypes=[('FP Template', '.csv')])
-    main(template, FRAGPIPE_PATH, USE_LINUX)
+    main(template, FRAGPIPE_PATH, USE_LINUX, TOOLS_TO_DISABLE)
     print('Done!')

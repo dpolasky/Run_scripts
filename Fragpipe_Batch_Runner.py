@@ -287,7 +287,7 @@ def update_folder_linux(folder_name):
         linux_name = linux_name.replace('\\', '/')
         linux_name = linux_name.replace('//', '/')
     elif 'C\\:' in folder_name:
-        linux_name = folder_name.replace('C\\:', '/storage')
+        linux_name = folder_name.replace('C\\:', '')
         linux_name = linux_name.replace('\\', '/')
         linux_name = linux_name.replace('//', '/')
     else:

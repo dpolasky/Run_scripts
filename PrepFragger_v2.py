@@ -12,35 +12,17 @@ import subprocess
 from dataclasses import dataclass
 import EditParams
 
-# FRAGGER_JARNAME = 'msfragger-2.3-RC3_20191120_varmodGlycSequon.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC9_20191210_noVarmodDelete.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.3-RC11_20191223_flexY.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.4-RC3_20200220_glycCalOffsets.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200301-calOffsets.one-jar.jar'   # same as 2/28 full fix, except WITH cal offsets
-
-# FRAGGER_JARNAME = 'msfragger-2.4-RC1_20200203.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200228-fix-full.one-jar.jar'       # correct glyco1.0, no cal offsets
-# FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200303-noRebaseWithFixes-noCalOffset.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'
-
-# FRAGGER_JARNAME = 'msfragger-2.4_20200409_noMerge-intGreater.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1-rc3_20200617_sumIsos.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1-rc3_20200617.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1-rc4_20200713_fixIsoCorrMaxMass.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-2.5-rc5_20200525.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.0.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1-rc6_20200728.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1-rc9_20200811c_paramFix3-real.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.1-rc27_20200919.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-2.4-RC4_Glyco-1.0_20200316.one-jar.jar'  # deiso paper
 # FRAGGER_JARNAME = 'msfragger-2.4-RC6_Glyco-1.0_20200320_intFilterFix.one-jar.jar'   # Sciex deiso paper
 # FRAGGER_JARNAME = 'msfragger-3.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.1.1_20201008_minSeqBugFix.one-jar.jar'
 # FRAGGER_JARNAME = 'msfragger-3.2-rc3_20201218_pvt3-FCfix.one-jar.jar'
-FRAGGER_JARNAME = 'msfragger-3.2-rc8_20210201_fixPVT3bug.one-jar.jar'
-# FRAGGER_JARNAME = 'msfragger-3.2-rc2_20201116.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.2-rc8_20210201_fixPVT3bug.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.3_20210723.one-jar.jar'
+FRAGGER_JARNAME = 'msfragger-3.4-rc4-jar-with-dependencies.jar'
+# FRAGGER_JARNAME = 'msfragger-3.3-rc8_20210505-YopenFixed.one-jar.jar'
+# FRAGGER_JARNAME = 'msfragger-3.5-rc1-jar-with-dependencies.jar'
 
 # USE_BATCH = True        # multi-batch: searches for template.csv file in each selected directory and creates runs, combines into single shell in outer dir
 USE_BATCH = False
@@ -48,15 +30,15 @@ USE_BATCH = False
 # SERIAL_PHILOSOPHER = False
 SERIAL_PHILOSOPHER = True      # Serial philosopher is more convenient in most cases, but CANNOT be used with multi-activation or enzyme methods (as these need all runs to finish for combined phil runs)
 
-FRAGGER_MEM = 400
+FRAGGER_MEM = 200
 RAW_FORMAT = '.mzML'
 # RAW_FORMAT = '.mgf'
 # RAW_FORMAT = '.d'
 
 # RUN_TMTI = True     # run TMT-integrator
 RUN_TMTI = False
-RUN_PTMPROPHET = True
-# RUN_PTMPROPHET = False
+# RUN_PTMPROPHET = True
+RUN_PTMPROPHET = False
 PTMPROPHET_MANUAL = True    # run PTMProphet directly, NOT through Philosopher. Requires a bunch of extra steps. Needed for hybrid data (>1 ion type)
 PTMPROPHET_PARSER_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\PTMProphetParser"
 # QUANT_COPY_ANNOTATION_FILE = True
@@ -64,8 +46,8 @@ QUANT_COPY_ANNOTATION_FILE = False
 # if QUANT_COPY_ANNOTATION_FILE or RUN_PTMPROPHET or RUN_TMTI:
 #     print('Dont forget to add mzML files to path using link_mzml shell script before phil runs quant!')
 
-TMTI_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\TMTIntegrator_v2.1.5.jar"
-TMTI_MODS = 'S[167], T[181], Y[243], K[170], K[471]'
+TMTI_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\TMTIntegrator_v2.2.jar"
+TMTI_MODS = 'S[167], T[181], Y[243]'
 
 # JAVA_TO_USE = 'java'        # use default java
 JAVA_TO_USE = '/storage/dpolasky/tools/bin/jdk-14.0.2/bin/java'        # java 14 = fast

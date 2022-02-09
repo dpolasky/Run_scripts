@@ -11,13 +11,14 @@ import time
 import RemoveScans_mzML
 
 CHECK_ONLY = False  # do not actually run MSConvert if True, only validate that files are all converted successfully
+# CHECK_ONLY = True  # do not actually run MSConvert if True, only validate that files are all converted successfully
 
 tool_path = r"C:\Users\dpolasky\AppData\Local\Apps\ProteoWizard 3.0.19296.ebe17a86f 64-bit\msconvert.exe"
 out_dir = ''
 DEISOTOPE = False
 DEISO_TIME_TEST = False
 RUN_BOTH = False
-THREADS = 8
+THREADS = 11
 MAX_CHARGE = 6
 # ACTIVATION_LIST = ['HCD', 'AIETD']   # 'ETD', 'HCD', etc. IF NOT USING, SET TO ['']
 ACTIVATION_LIST = None
@@ -82,7 +83,7 @@ def run_cmd(command_str):
     return command_str
 
 
-def check_results(pool, results_list, commands_list):
+def check_results(pool, results_list, commands_list, skip_zeros=False):
     """
     Check if results have finished with set timeout period and rerun them if not
     :param pool:
@@ -97,6 +98,11 @@ def check_results(pool, results_list, commands_list):
         except multiprocessing.context.TimeoutError:
             # this result failed and needs to be rerun
             test_cmd = commands_list[index]
+            if skip_zeros:
+                # converting failed, possibly because of an empty scan with zero-skip filter. Remove that for this file to try again
+                if '--filter "zeroSamples removeExtra 1-"' in test_cmd:
+                    print('**********retrying without zeroing')
+                    test_cmd = test_cmd.replace('--filter "zeroSamples removeExtra 1-"', '')
             result2 = pool.apply_async(run_cmd, args=[test_cmd])
             results2.append(result2)
 
@@ -146,7 +152,7 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
                 results.append(pool_result)
 
             results_check = check_results(pool, results, commands)
-            results_check2 = check_results(pool, results_check, commands)
+            results_check2 = check_results(pool, results_check, commands, skip_zeros=True)
 
             # pool.join()
             pool.terminate()
@@ -156,9 +162,6 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
             for cmd in commands:
                 run_cmd(cmd)
 
-        # kill any remaining MSConvert processes because we're definitely done and having them hang around can cause problems...
-        # kill_msconvert_procs()
-
         # rename files by activation type
         if activation is not None:
             outputfiles = [os.path.join(outputdir, x) for x in os.listdir(outputdir)]
@@ -167,10 +170,11 @@ def run_msconvert(raw_files, activation_types=None, deisotope=False):
     output_files = [os.path.join(maindir, x) for x in os.listdir(maindir) if x.endswith('.mzML')]
     print('checking {} file outputs...'.format(len(output_files)))
     bad_files = check_converted_files(output_files)
-    # for file in bad_files:
-    #     print('Bad: {}'.format(file))
     if len(bad_files) == 0:
         print('All files extracted successfully')
+
+    # kill any remaining MSConvert processes because we're definitely done and having them hang around can cause problems...
+    kill_msconvert_procs()
 
 
 def rename_files_activation(activation, outputfiles, do_ethcd_fix=False):
@@ -303,8 +307,8 @@ if __name__ == '__main__':
     if CHECK_ONLY:
         check_converted_files(files)
     else:
-        # run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)
-        singlethr_guarantee_slow_method(files, ACTIVATION_LIST, DEISOTOPE)
+        run_msconvert(files, ACTIVATION_LIST, DEISOTOPE)
+        # singlethr_guarantee_slow_method(files, ACTIVATION_LIST, DEISOTOPE)
     # main_dir = os.path.dirname(files[0])
     # output_files = [os.path.join(main_dir, x) for x in os.listdir(main_dir) if x.endswith('.mzML')]
     # bad_files = check_converted_files(output_files)

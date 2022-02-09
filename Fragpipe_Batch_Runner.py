@@ -215,6 +215,7 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
                         fragpipe_run.philosopher_path
                         ]
             outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {}\n'.format(*arg_list))
+        outfile.write('sleep 10s\n')
 
 
 def make_commands_windows(run_list, fragpipe_path, output_path):

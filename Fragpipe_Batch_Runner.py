@@ -51,12 +51,12 @@ class FragpipeRun(object):
     def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, disable_list=None, python=None):
         if output == '':
             # use base workflow name automatically if no specific output name specified
-            output_name = os.path.basename(os.path.splitext(workflow)[0])
+            output_name = os.path.join('__FraggerResults', os.path.basename(os.path.splitext(workflow)[0]))
         else:
             output_name = output
 
         # update output_dir to full path (template has only the unique name, not the full path), and make dir if it doesn't exist
-        self.output_path = os.path.join(os.path.dirname(workflow), '__FraggerResults', output_name)
+        self.output_path = os.path.join(os.path.dirname(workflow), output_name)
         if not os.path.exists(self.output_path):
             os.makedirs(self.output_path)
 

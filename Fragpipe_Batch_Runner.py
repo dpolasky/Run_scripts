@@ -15,6 +15,7 @@ FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a
 USE_LINUX = True
 # DISABLE_TOOLS = True
 DISABLE_TOOLS = False
+BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same folder
 
 
 class DisableTools(Enum):
@@ -199,7 +200,7 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
     :return: void
     :rtype:
     """
-    batch_path = os.path.join(output_path, 'fragpipe_batch.sh')
+    batch_path = os.path.join(output_path, 'fragpipe_batch{}.sh'.format(BATCH_INCREMENT))
     linux_fragpipe = update_folder_linux(fragpipe_path)
     with open(batch_path, 'w', newline='') as outfile:
         outfile.write('#!/bin/bash\nset -xe\n\n')   # header

@@ -206,6 +206,7 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
         outfile.write('#!/bin/bash\nset -xe\n\n')   # header
         for fragpipe_run in run_list:
             fragpipe_run.update_linux()
+            log_path = '{}/log_fragpipe.txt'.format(fragpipe_run.output_path)
             arg_list = [linux_fragpipe,
                         fragpipe_run.workflow_path,
                         fragpipe_run.manifest_path,
@@ -213,10 +214,10 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
                         fragpipe_run.ram,
                         fragpipe_run.threads,
                         fragpipe_run.msfragger_path,
-                        fragpipe_run.philosopher_path
+                        fragpipe_run.philosopher_path,
+                        log_path
                         ]
-            outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {}\n'.format(*arg_list))
-        outfile.write('sleep 10s\n')
+            outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} |& tee {}\n'.format(*arg_list))
 
 
 def make_commands_windows(run_list, fragpipe_path, output_path):

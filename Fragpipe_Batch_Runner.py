@@ -157,6 +157,8 @@ def update_workflow_linux(workflow_path):
         for line in list(readfile):
             if line.startswith('database.db-path'):
                 newline = update_folder_linux(line)
+            elif line.startswith('ptmshepherd.glycodatabase'):
+                newline = update_folder_linux(line)
             else:
                 newline = line
             output.append(newline)

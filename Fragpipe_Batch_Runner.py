@@ -27,11 +27,14 @@ class DisableTools(Enum):
     PEPTIDEPROPHET = 'peptide-prophet'
     PTMPROPHET = 'ptmprophet'
     PTMSHEPHERD = 'shepherd'
-    VALIDATION = 'psm-validation'
+    VALIDATION = 'psm-validation'       # note: need to use this also if turning off PP/Perc
     TMTINTEGRATOR = 'tmtintegrator'
+    PERCOLATOR = 'percolator'
 
 
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]
+
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
 

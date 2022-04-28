@@ -30,10 +30,12 @@ class DisableTools(Enum):
     VALIDATION = 'psm-validation'       # note: need to use this also if turning off PP/Perc
     TMTINTEGRATOR = 'tmtintegrator'
     PERCOLATOR = 'percolator'
+    FILTERandREPORT = 'report'
 
 
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]     # filter/report and PTM-S or quant only
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None

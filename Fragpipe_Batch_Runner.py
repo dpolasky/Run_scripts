@@ -16,6 +16,7 @@ USE_LINUX = True
 # DISABLE_TOOLS = True
 DISABLE_TOOLS = False
 BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same folder
+OUTPUT_FOLDER_APPEND = '__FraggerResults'
 
 
 class DisableTools(Enum):
@@ -59,7 +60,7 @@ class FragpipeRun(object):
     def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, python=None, skip_MSFragger=None, disable_list=None):
         if output == '':
             # use base workflow name automatically if no specific output name specified
-            output_name = os.path.join('__FraggerResults', os.path.basename(os.path.splitext(workflow)[0]))
+            output_name = os.path.join(OUTPUT_FOLDER_APPEND, os.path.basename(os.path.splitext(workflow)[0]))
         else:
             output_name = output
 
@@ -85,9 +86,17 @@ class FragpipeRun(object):
         if skip_MSFragger is not None:
             # disable the MSFragger run in this workflow and note the path to copy from for adding to the shell script
             edit_workflow_disable_tools(self.workflow_path, [DisableTools.MSFRAGGER])
-            if skip_MSFragger.endswith('.workflow') or skip_MSFragger.endswith('.workflow\n'):
-                skip_MSFragger = os.path.splitext(skip_MSFragger)[0]
-            self.skip_msfragger_path = skip_MSFragger
+            if output == '':
+                # add fragger results folder append
+                if skip_MSFragger.endswith('.workflow') or skip_MSFragger.endswith('.workflow\n'):
+                    final_folder = os.path.basename(os.path.splitext(skip_MSFragger)[0])
+                else:
+                    final_folder = os.path.basename(skip_MSFragger)
+                self.skip_msfragger_path = os.path.join(os.path.dirname(skip_MSFragger), OUTPUT_FOLDER_APPEND, final_folder)
+            else:
+                if skip_MSFragger.endswith('.workflow') or skip_MSFragger.endswith('.workflow\n'):
+                    skip_MSFragger = os.path.splitext(skip_MSFragger)[0]
+                self.skip_msfragger_path = skip_MSFragger
         else:
             self.skip_msfragger_path = None
 
@@ -237,8 +246,8 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
                         log_path
                         ]
             if fragpipe_run.skip_msfragger_path is not None:
-                outfile.write('cp {}/*.pepxml {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
-                outfile.write('cp {}/*.pin {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
+                outfile.write('cp {}/*.pepXML {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
+                # outfile.write('cp {}/*.pin {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
             outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} |& tee {}\n'.format(*arg_list))
 
 

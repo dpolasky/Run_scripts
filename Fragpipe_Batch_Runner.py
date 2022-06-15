@@ -35,7 +35,8 @@ class DisableTools(Enum):
 
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]     # filter/report and PTM-S or quant only
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
+TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
@@ -53,8 +54,9 @@ class FragpipeRun(object):
     msfragger_path: str
     philosopher_path: str
     python_path: str
+    skip_msfragger_path: str
 
-    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, disable_list=None, python=None):
+    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, python=None, skip_MSFragger=None, disable_list=None):
         if output == '':
             # use base workflow name automatically if no specific output name specified
             output_name = os.path.join('__FraggerResults', os.path.basename(os.path.splitext(workflow)[0]))
@@ -79,6 +81,16 @@ class FragpipeRun(object):
             self.python_path = python
         else:
             self.python_path = None
+
+        if skip_MSFragger is not None:
+            # disable the MSFragger run in this workflow and note the path to copy from for adding to the shell script
+            edit_workflow_disable_tools(self.workflow_path, [DisableTools.MSFRAGGER])
+            if skip_MSFragger.endswith('.workflow') or skip_MSFragger.endswith('.workflow\n'):
+                skip_MSFragger = os.path.splitext(skip_MSFragger)[0]
+            self.skip_msfragger_path = skip_MSFragger
+        else:
+            self.skip_msfragger_path = None
+
         if disable_list is not None:
             edit_workflow_disable_tools(self.workflow_path, disable_list)
 
@@ -224,6 +236,9 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
                         fragpipe_run.philosopher_path,
                         log_path
                         ]
+            if fragpipe_run.skip_msfragger_path is not None:
+                outfile.write('cp {}/*.pepxml {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
+                outfile.write('cp {}/*.pin {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
             outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} |& tee {}\n'.format(*arg_list))
 
 

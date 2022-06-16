@@ -17,6 +17,8 @@ USE_LINUX = True
 DISABLE_TOOLS = False
 BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same folder
 OUTPUT_FOLDER_APPEND = '__FraggerResults'
+FILETYPES_FOR_COPY = ['pepXML']
+# FILETYPES_FOR_COPY = ['pepXML', 'pin']
 
 
 class DisableTools(Enum):
@@ -246,7 +248,8 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
                         log_path
                         ]
             if fragpipe_run.skip_msfragger_path is not None:
-                outfile.write('cp {}/*.pepXML {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
+                for filetype_str in FILETYPES_FOR_COPY:
+                    outfile.write('cp {}/*.{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
                 # outfile.write('cp {}/*.pin {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
             outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} |& tee {}\n'.format(*arg_list))
 

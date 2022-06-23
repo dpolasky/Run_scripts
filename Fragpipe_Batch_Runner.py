@@ -8,6 +8,7 @@ from tkinter import filedialog
 import os
 import shutil
 from enum import Enum
+import datetime
 
 
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
@@ -39,7 +40,9 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]     # filter/report and PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
-TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
@@ -236,7 +239,8 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
         outfile.write('#!/bin/bash\nset -xe\n\n')   # header
         for fragpipe_run in run_list:
             fragpipe_run.update_linux()
-            log_path = '{}/log_fragpipe.txt'.format(fragpipe_run.output_path)
+            current_time = datetime.datetime.now()
+            log_path = '{}/log-fragpipe_{}.txt'.format(fragpipe_run.output_path, current_time.strftime("%Y-%m-%d_%H-%M-%S"))
             arg_list = [linux_fragpipe,
                         fragpipe_run.workflow_path,
                         fragpipe_run.manifest_path,

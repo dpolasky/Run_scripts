@@ -41,8 +41,9 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]     # filter/report and PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
@@ -241,6 +242,11 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
             fragpipe_run.update_linux()
             current_time = datetime.datetime.now()
             log_path = '{}/log-fragpipe_{}.txt'.format(fragpipe_run.output_path, current_time.strftime("%Y-%m-%d_%H-%M-%S"))
+            if fragpipe_run.skip_msfragger_path is not None:
+                for filetype_str in FILETYPES_FOR_COPY:
+                    outfile.write('cp {}/*.{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
+                # outfile.write('cp {}/*.pin {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
+
             arg_list = [linux_fragpipe,
                         fragpipe_run.workflow_path,
                         fragpipe_run.manifest_path,
@@ -249,13 +255,14 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
                         fragpipe_run.threads,
                         fragpipe_run.msfragger_path,
                         fragpipe_run.philosopher_path,
-                        log_path
                         ]
-            if fragpipe_run.skip_msfragger_path is not None:
-                for filetype_str in FILETYPES_FOR_COPY:
-                    outfile.write('cp {}/*.{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
-                # outfile.write('cp {}/*.pin {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
-            outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} |& tee {}\n'.format(*arg_list))
+            if len(fragpipe_run.python_path) > 0:
+                arg_list.append(fragpipe_run.python_path)
+                arg_list.append(log_path)
+                outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-python {} |& tee {}\n'.format(*arg_list))
+            else:
+                arg_list.append(log_path)
+                outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} |& tee {}\n'.format(*arg_list))
 
 
 def make_commands_windows(run_list, fragpipe_path, output_path):

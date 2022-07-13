@@ -239,6 +239,9 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
     with open(batch_path, 'w', newline='') as outfile:
         outfile.write('#!/bin/bash\nset -xe\n\n')   # header
         for fragpipe_run in run_list:
+            # copy original format manifest file to output dir before updating paths
+            shutil.copy(fragpipe_run.manifest_path, os.path.join(fragpipe_run.output_path, '{}.fp-manifest'.format(os.path.basename(fragpipe_run.manifest_path))))
+
             fragpipe_run.update_linux()
             current_time = datetime.datetime.now()
             log_path = '{}/log-fragpipe_{}.txt'.format(fragpipe_run.output_path, current_time.strftime("%Y-%m-%d_%H-%M-%S"))

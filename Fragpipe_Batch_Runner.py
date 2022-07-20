@@ -41,8 +41,8 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]     # filter/report and PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
 
 if not DISABLE_TOOLS:
@@ -240,7 +240,7 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
         outfile.write('#!/bin/bash\nset -xe\n\n')   # header
         for fragpipe_run in run_list:
             # copy original format manifest file to output dir before updating paths
-            shutil.copy(fragpipe_run.manifest_path, os.path.join(fragpipe_run.output_path, '{}.fp-manifest'.format(os.path.basename(fragpipe_run.manifest_path))))
+            shutil.copy(fragpipe_run.manifest_path, os.path.join(fragpipe_run.output_path, os.path.basename(fragpipe_run.manifest_path)))
 
             fragpipe_run.update_linux()
             current_time = datetime.datetime.now()

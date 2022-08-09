@@ -35,6 +35,8 @@ class DisableTools(Enum):
     TMTINTEGRATOR = 'tmtintegrator'
     PERCOLATOR = 'percolator'
     FILTERandREPORT = 'report'
+    FREEQUANT = 'freequant'
+    LFQ = 'label-free-quant'        # note: must also be used with FreeQuant/IonQuant to disable
 
 
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
@@ -42,8 +44,9 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
+TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None

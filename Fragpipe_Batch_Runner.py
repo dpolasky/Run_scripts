@@ -18,8 +18,9 @@ USE_LINUX = True
 DISABLE_TOOLS = False
 BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same folder
 OUTPUT_FOLDER_APPEND = '__FraggerResults'
-FILETYPES_FOR_COPY = ['pepXML']
+# FILETYPES_FOR_COPY = ['pepXML']
 # FILETYPES_FOR_COPY = ['pepXML', 'pin']
+FILETYPES_FOR_COPY = ['pep.xml', 'prot.xml']
 
 
 class DisableTools(Enum):
@@ -220,6 +221,7 @@ def parse_template(template_file, disable_list):
             if line.startswith('#'):
                 continue
             splits = [x for x in line.split(',') if x is not '\n']
+            splits[-1] = splits[-1].rstrip('\n')
             this_run = FragpipeRun(*splits, disable_list=disable_list)
             runs.append(this_run)
     return runs
@@ -250,7 +252,9 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
             log_path = '{}/log-fragpipe_{}.txt'.format(fragpipe_run.output_path, current_time.strftime("%Y-%m-%d_%H-%M-%S"))
             if fragpipe_run.skip_msfragger_path is not None:
                 for filetype_str in FILETYPES_FOR_COPY:
-                    outfile.write('cp {}/*.{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
+                    # link rather than copy to save space (should be okay b/c paths are absolute)
+                    outfile.write('ln -s {}/*.{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
+                    # outfile.write('cp {}/*.{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
                 # outfile.write('cp {}/*.pin {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
 
             arg_list = [linux_fragpipe,

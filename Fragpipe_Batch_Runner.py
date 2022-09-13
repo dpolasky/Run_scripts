@@ -46,8 +46,8 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
-TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
+# TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
@@ -195,6 +195,8 @@ def update_workflow_linux(workflow_path):
                 newline = update_folder_linux(line)
             elif line.startswith('ptmshepherd.glycodatabase'):
                 newline = update_folder_linux(line)
+            elif line.startswith('ptmshepherd.opair.glyco_db'):
+                newline = update_folder_linux(line)
             else:
                 newline = line
             output.append(newline)
@@ -244,8 +246,8 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
     with open(batch_path, 'w', newline='') as outfile:
         outfile.write('#!/bin/bash\nset -xe\n\n')   # header
         for fragpipe_run in run_list:
-            # copy original format manifest file to output dir before updating paths
-            shutil.copy(fragpipe_run.manifest_path, os.path.join(fragpipe_run.output_path, os.path.basename(fragpipe_run.manifest_path)))
+            # copy original format manifest file to output dir before updating paths [disabled after 18.1 update fixes manifest copying]
+            # shutil.copy(fragpipe_run.manifest_path, os.path.join(fragpipe_run.output_path, os.path.basename(fragpipe_run.manifest_path)))
 
             fragpipe_run.update_linux()
             current_time = datetime.datetime.now()

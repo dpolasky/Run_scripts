@@ -12,6 +12,7 @@ import datetime
 
 
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
+# FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\UCLA-tags\bin\fragpipe"
 # FRAGPIPE_PATH = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\MSFragger-GUI\build\install\fragpipe\bin\fragpipe.exe"
 USE_LINUX = True
 # DISABLE_TOOLS = True
@@ -46,8 +47,9 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
 # TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]     # OPair, quant only
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
@@ -66,8 +68,9 @@ class FragpipeRun(object):
     philosopher_path: str
     python_path: str
     skip_msfragger_path: str
+    database_path: str
 
-    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, python=None, skip_MSFragger=None, disable_list=None):
+    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, python=None, skip_MSFragger=None, database_path=None, disable_list=None):
         if output == '':
             # use base workflow name automatically if no specific output name specified
             output_name = os.path.join(OUTPUT_FOLDER_APPEND, os.path.basename(os.path.splitext(workflow)[0]))
@@ -93,7 +96,7 @@ class FragpipeRun(object):
         else:
             self.python_path = None
 
-        if skip_MSFragger is not None:
+        if skip_MSFragger is not None and skip_MSFragger is not '':
             # disable the MSFragger run in this workflow and note the path to copy from for adding to the shell script
             edit_workflow_disable_tools(self.workflow_path, [DisableTools.MSFRAGGER])
             if output == '':
@@ -112,6 +115,11 @@ class FragpipeRun(object):
 
         if disable_list is not None:
             edit_workflow_disable_tools(self.workflow_path, disable_list)
+        if database_path is not None:
+            self.database_path = database_path
+            if USE_LINUX:
+                self.database_path = update_folder_linux(self.database_path)
+            self.edit_database()
 
     def update_linux(self):
         """
@@ -131,6 +139,32 @@ class FragpipeRun(object):
         self.philosopher_path = update_folder_linux(self.philosopher_path)
         if self.python_path is not None:
             self.python_path = update_folder_linux(self.python_path)
+
+    def edit_database(self):
+        """
+        Add (or edit) the database with provided override path from the template
+        :return: void
+        :rtype:
+        """
+        output = []
+        found_db = False
+        index = 0
+        with open(self.workflow_path, 'r') as readfile:
+            for line in list(readfile):
+                if line.startswith('database.db-path'):
+                    newline = 'database.db-path={}\n'.format(self.database_path)
+                    found_db = True
+                elif line.startswith('crystalc') and not found_db:     # db-path is not in the file, would have been found already
+                    output.append('database.db-path={}\n'.format(self.database_path))
+                    newline = line
+                    found_db = True
+                else:
+                    newline = line
+                output.append(newline)
+                index += 1
+        with open(self.workflow_path, 'w') as outfile:
+            for line in output:
+                outfile.write(line)
 
 
 def update_manifest_linux(manifest_path):

@@ -12,6 +12,8 @@ import datetime
 
 
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
+# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\19.0\bin\fragpipe"
+# FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\19.0-patch-version-comp\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\UCLA-tags\bin\fragpipe"
 # FRAGPIPE_PATH = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\MSFragger-GUI\build\install\fragpipe\bin\fragpipe.exe"
 USE_LINUX = True
@@ -47,9 +49,9 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
 # TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]     # OPair, quant only
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]     # OPair, quant only
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
@@ -66,11 +68,12 @@ class FragpipeRun(object):
     threads: str
     msfragger_path: str
     philosopher_path: str
+    ionquant_path: str
     python_path: str
     skip_msfragger_path: str
     database_path: str
 
-    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, python=None, skip_MSFragger=None, database_path=None, disable_list=None):
+    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, ionquant, python=None, skip_MSFragger=None, database_path=None, disable_list=None):
         if output == '':
             # use base workflow name automatically if no specific output name specified
             output_name = os.path.join(OUTPUT_FOLDER_APPEND, os.path.basename(os.path.splitext(workflow)[0]))
@@ -91,6 +94,7 @@ class FragpipeRun(object):
         self.threads = threads
         self.msfragger_path = msfragger
         self.philosopher_path = philosopher
+        self.ionquant_path = ionquant
         if python is not None:
             self.python_path = python
         else:
@@ -137,6 +141,7 @@ class FragpipeRun(object):
         self.output_path = update_folder_linux(self.output_path)
         self.msfragger_path = update_folder_linux(self.msfragger_path)
         self.philosopher_path = update_folder_linux(self.philosopher_path)
+        self.ionquant_path = update_folder_linux(self.ionquant_path)
         if self.python_path is not None:
             self.python_path = update_folder_linux(self.python_path)
 
@@ -301,18 +306,20 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
                         fragpipe_run.threads,
                         fragpipe_run.msfragger_path,
                         fragpipe_run.philosopher_path,
+                        fragpipe_run.ionquant_path,
                         ]
             if len(fragpipe_run.python_path) > 0:
                 arg_list.append(fragpipe_run.python_path)
                 arg_list.append(log_path)
-                outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-python {} |& tee {}\n'.format(*arg_list))
+                outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} --config-python {} |& tee {}\n'.format(*arg_list))
             else:
                 arg_list.append(log_path)
-                outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} |& tee {}\n'.format(*arg_list))
+                outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} |& tee {}\n'.format(*arg_list))
 
 
 def make_commands_windows(run_list, fragpipe_path, output_path):
     """
+    NOT USED - test first
     Format commands and write to windows bat file from the provided run list
     :param run_list: list of runs
     :type run_list: list[FragpipeRun]

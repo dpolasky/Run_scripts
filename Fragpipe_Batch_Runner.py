@@ -234,7 +234,7 @@ def update_workflow_linux(workflow_path):
                 newline = update_folder_linux(line)
             elif line.startswith('ptmshepherd.glycodatabase'):
                 newline = update_folder_linux(line)
-            elif line.startswith('ptmshepherd.opair.glyco_db'):
+            elif line.startswith('ptmshepherd.opair.glyco_db') or line.startswith('opair.glyco_db'):
                 newline = update_folder_linux(line)
             else:
                 newline = line

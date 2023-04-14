@@ -23,7 +23,7 @@ BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same fo
 OUTPUT_FOLDER_APPEND = '__FraggerResults'
 # FILETYPES_FOR_COPY = ['pepXML']
 # FILETYPES_FOR_COPY = ['pepXML', 'pin']
-FILETYPES_FOR_COPY = ['pep.xml', 'prot.xml']
+FILETYPES_FOR_COPY = ['.pep.xml', '.prot.xml', '_opair.txt']
 
 
 class DisableTools(Enum):
@@ -44,14 +44,16 @@ class DisableTools(Enum):
 
 
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]     # filter/report and PTM-S or quant only
+# filter/report onwards (PTM-S, OPair, quant)
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
 # TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]     # OPair, quant only
+ # OPair, quant only
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
@@ -236,6 +238,8 @@ def update_workflow_linux(workflow_path):
                 newline = update_folder_linux(line)
             elif line.startswith('ptmshepherd.opair.glyco_db') or line.startswith('opair.glyco_db'):
                 newline = update_folder_linux(line)
+            elif line.startswith('opair.oxonium_filtering_file'):
+                newline = update_folder_linux(line)
             else:
                 newline = line
             output.append(newline)
@@ -294,7 +298,7 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
             if fragpipe_run.skip_msfragger_path is not None:
                 for filetype_str in FILETYPES_FOR_COPY:
                     # link rather than copy to save space (should be okay b/c paths are absolute)
-                    outfile.write('ln -s {}/*.{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
+                    outfile.write('ln -s {}/*{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
                     # outfile.write('cp {}/*.{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
                 # outfile.write('cp {}/*.pin {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
 

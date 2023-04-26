@@ -12,6 +12,7 @@ import datetime
 
 
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
+# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\19.0\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\19.0-patch-version-comp\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\UCLA-tags\bin\fragpipe"
@@ -21,6 +22,8 @@ USE_LINUX = True
 DISABLE_TOOLS = False
 BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same folder
 OUTPUT_FOLDER_APPEND = '__FraggerResults'
+
+# NOTE: some tools are always disabled (see below) if copying - check there if you need PeptideProphet/etc after copying
 # FILETYPES_FOR_COPY = ['pepXML']
 # FILETYPES_FOR_COPY = ['pepXML', 'pin']
 FILETYPES_FOR_COPY = ['.pep.xml', '.prot.xml', '_opair.txt']
@@ -58,6 +61,10 @@ TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, Disable
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
 
+# always disable if copying results files over (default: start at Filter)
+DISABLE_IF_COPY = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
+# DISABLE_IF_COPY = [DisableTools.MSFRAGGER]
+
 
 class FragpipeRun(object):
     """
@@ -66,6 +73,7 @@ class FragpipeRun(object):
     workflow_path: str
     manifest_path: str
     output_path: str
+    original_output_path: str
     ram: str
     threads: str
     msfragger_path: str
@@ -86,6 +94,7 @@ class FragpipeRun(object):
         self.output_path = os.path.join(os.path.dirname(workflow), output_name)
         if not os.path.exists(self.output_path):
             os.makedirs(self.output_path)
+        self.original_output_path = self.output_path
 
         # copy workflow file to output dir (for later reference)
         self.workflow_path = os.path.join(self.output_path, os.path.basename(workflow))
@@ -104,7 +113,7 @@ class FragpipeRun(object):
 
         if skip_MSFragger is not None and skip_MSFragger is not '':
             # disable the MSFragger run in this workflow and note the path to copy from for adding to the shell script
-            edit_workflow_disable_tools(self.workflow_path, [DisableTools.MSFRAGGER])
+            edit_workflow_disable_tools(self.workflow_path, DISABLE_IF_COPY)
             if output == '':
                 # add fragger results folder append
                 if skip_MSFragger.endswith('.workflow') or skip_MSFragger.endswith('.workflow\n'):
@@ -297,10 +306,9 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
             log_path = '{}/log-fragpipe_{}.txt'.format(fragpipe_run.output_path, current_time.strftime("%Y-%m-%d_%H-%M-%S"))
             if fragpipe_run.skip_msfragger_path is not None:
                 for filetype_str in FILETYPES_FOR_COPY:
-                    # link rather than copy to save space (should be okay b/c paths are absolute)
-                    outfile.write('ln -s {}/*{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
-                    # outfile.write('cp {}/*.{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
-                # outfile.write('cp {}/*.pin {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), update_folder_linux(fragpipe_run.output_path)))
+                    # link necessary file types from the copied analysis. Check if the needed files exist (from a previous attempt at the run) and write commands to link if not
+                    if not any(file.endswith(filetype_str) for file in os.listdir(fragpipe_run.original_output_path)):
+                        outfile.write('ln -s {}/*{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
 
             arg_list = [linux_fragpipe,
                         fragpipe_run.workflow_path,

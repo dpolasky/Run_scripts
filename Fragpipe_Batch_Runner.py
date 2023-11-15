@@ -12,6 +12,7 @@ import datetime
 
 
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
+# FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\20.0_msf-offsets\fragpipe\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\19.0\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\19.0-patch-version-comp\bin\fragpipe"
@@ -38,7 +39,7 @@ class DisableTools(Enum):
     PEPTIDEPROPHET = 'peptide-prophet'
     PTMPROPHET = 'ptmprophet'
     PTMSHEPHERD = 'shepherd'
-    VALIDATION = 'psm-validation'       # note: need to use this also if turning off PP/Perc
+    PSMVALIDATION = 'psm-validation'       # note: need to use this also if turning off PP/Perc
     TMTINTEGRATOR = 'tmtintegrator'
     PERCOLATOR = 'percolator'
     FILTERandREPORT = 'report'
@@ -47,22 +48,23 @@ class DisableTools(Enum):
 
 
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
 # filter/report onwards (PTM-S, OPair, quant)
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.VALIDATION, DisableTools.PERCOLATOR]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PSMVALIDATION, DisableTools.PERCOLATOR]
 # TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
  # OPair, quant only
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
 
 # always disable if copying results files over (default: start at Filter)
-# DISABLE_IF_COPY = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.VALIDATION, DisableTools.PTMPROPHET]
+# DISABLE_IF_COPY = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
 DISABLE_IF_COPY = [DisableTools.MSFRAGGER]
 
 
@@ -70,6 +72,7 @@ class FragpipeRun(object):
     """
     container for run info
     """
+    fragpipe_path: str
     workflow_path: str
     manifest_path: str
     output_path: str
@@ -83,7 +86,7 @@ class FragpipeRun(object):
     skip_msfragger_path: str
     database_path: str
 
-    def __init__(self, workflow, manifest, output, ram, threads, msfragger, philosopher, ionquant, python=None, skip_MSFragger=None, database_path=None, disable_list=None):
+    def __init__(self, fragpipe, workflow, manifest, output, ram, threads, msfragger, philosopher, ionquant, python=None, skip_MSFragger=None, database_path=None, disable_list=None):
         if output == '':
             # use base workflow name automatically if no specific output name specified
             output_name = os.path.join(OUTPUT_FOLDER_APPEND, os.path.basename(os.path.splitext(workflow)[0]))
@@ -100,6 +103,7 @@ class FragpipeRun(object):
         self.workflow_path = os.path.join(self.output_path, os.path.basename(workflow))
         shutil.copy(workflow, self.workflow_path)
 
+        self.fragpipe_path = fragpipe
         self.manifest_path = manifest
         self.ram = ram
         self.threads = threads
@@ -147,6 +151,7 @@ class FragpipeRun(object):
         update_workflow_linux(self.workflow_path)
 
         # update the paths themselves
+        self.fragpipe_path = update_folder_linux(self.fragpipe_path)
         self.workflow_path = update_folder_linux(self.workflow_path)
         self.manifest_path = update_folder_linux(self.manifest_path)
         self.output_path = update_folder_linux(self.output_path)
@@ -261,7 +266,7 @@ def update_workflow_linux(workflow_path):
             outfile.write(line)
 
 
-def parse_template(template_file, disable_list):
+def parse_template(template_file, disable_list, fragpipe_path):
     """
     read the template into a list of FragpipeRun containers
     :param template_file: full path to template file to read
@@ -278,12 +283,13 @@ def parse_template(template_file, disable_list):
                 continue
             splits = [x for x in line.split(',') if x is not '\n']
             splits[-1] = splits[-1].rstrip('\n')
+            splits.insert(0, fragpipe_path)
             this_run = FragpipeRun(*splits, disable_list=disable_list)
             runs.append(this_run)
     return runs
 
 
-def make_commands_linux(run_list, fragpipe_path, output_path):
+def make_commands_linux(run_list, output_path, write_output=True, is_first_run=True):
     """
     Format commands and write to linux shell script from the provided run list
     :param run_list: list of runs
@@ -296,39 +302,47 @@ def make_commands_linux(run_list, fragpipe_path, output_path):
     :rtype:
     """
     batch_path = os.path.join(output_path, 'fragpipe_batch{}.sh'.format(BATCH_INCREMENT))
-    linux_fragpipe = update_folder_linux(fragpipe_path)
-    with open(batch_path, 'w', newline='') as outfile:
-        outfile.write('#!/bin/bash\nset -xe\n\n')   # header
-        for fragpipe_run in run_list:
-            # copy original format manifest file to output dir before updating paths [disabled after 18.1 update fixes manifest copying]
-            # shutil.copy(fragpipe_run.manifest_path, os.path.join(fragpipe_run.output_path, os.path.basename(fragpipe_run.manifest_path)))
+    output = []
+    if is_first_run:
+        output.append('#!/bin/bash\nset -xe\n\n')   # bash header
 
-            fragpipe_run.update_linux()
-            current_time = datetime.datetime.now()
-            log_path = '{}/log-fragpipe_{}.txt'.format(fragpipe_run.output_path, current_time.strftime("%Y-%m-%d_%H-%M-%S"))
-            if fragpipe_run.skip_msfragger_path is not None:
-                for filetype_str in FILETYPES_FOR_COPY:
-                    # link necessary file types from the copied analysis. Check if the needed files exist (from a previous attempt at the run) and write commands to link if not
-                    if not any(file.endswith(filetype_str) for file in os.listdir(fragpipe_run.original_output_path)):
-                        outfile.write('ln -s {}/*{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
+    for fragpipe_run in run_list:
+        # copy original format manifest file to output dir before updating paths [disabled after 18.1 update fixes manifest copying]
+        # shutil.copy(fragpipe_run.manifest_path, os.path.join(fragpipe_run.output_path, os.path.basename(fragpipe_run.manifest_path)))
 
-            arg_list = [linux_fragpipe,
-                        fragpipe_run.workflow_path,
-                        fragpipe_run.manifest_path,
-                        fragpipe_run.output_path,
-                        fragpipe_run.ram,
-                        fragpipe_run.threads,
-                        fragpipe_run.msfragger_path,
-                        fragpipe_run.philosopher_path,
-                        fragpipe_run.ionquant_path,
-                        ]
-            if len(fragpipe_run.python_path) > 0:
-                arg_list.append(fragpipe_run.python_path)
-                arg_list.append(log_path)
-                outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} --config-python {} |& tee {}\n'.format(*arg_list))
-            else:
-                arg_list.append(log_path)
-                outfile.write('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} |& tee {}\n'.format(*arg_list))
+        fragpipe_run.update_linux()
+        current_time = datetime.datetime.now()
+        log_path = '{}/log-fragpipe_{}.txt'.format(fragpipe_run.output_path, current_time.strftime("%Y-%m-%d_%H-%M-%S"))
+        if fragpipe_run.skip_msfragger_path is not None:
+            for filetype_str in FILETYPES_FOR_COPY:
+                # link necessary file types from the copied analysis. Check if the needed files exist (from a previous attempt at the run) and write commands to link if not
+                if not any(file.endswith(filetype_str) for file in os.listdir(fragpipe_run.original_output_path)):
+                    output.append('ln -s {}/*{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
+
+        arg_list = [fragpipe_run.fragpipe_path,
+                    fragpipe_run.workflow_path,
+                    fragpipe_run.manifest_path,
+                    fragpipe_run.output_path,
+                    fragpipe_run.ram,
+                    fragpipe_run.threads,
+                    fragpipe_run.msfragger_path,
+                    fragpipe_run.philosopher_path,
+                    fragpipe_run.ionquant_path,
+                    ]
+        if len(fragpipe_run.python_path) > 0:
+            arg_list.append(fragpipe_run.python_path)
+            arg_list.append(log_path)
+            output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} --config-python {} |& tee {}\n'.format(*arg_list))
+        else:
+            arg_list.append(log_path)
+            output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} |& tee {}\n'.format(*arg_list))
+
+    if write_output:
+        with open(batch_path, 'w', newline='') as outfile:
+            for line in output:
+                outfile.write(line)
+
+    return output
 
 
 def make_commands_windows(run_list, fragpipe_path, output_path):
@@ -374,7 +388,7 @@ def main(template_file, fragpipe_path, write_to_linux, disable_list):
     :return: void
     :rtype:
     """
-    run_list = parse_template(template_file, disable_list)
+    run_list = parse_template(template_file, disable_list, fragpipe_path)
     output_dir = os.path.dirname(template_file)
     if write_to_linux:
         make_commands_linux(run_list, fragpipe_path, output_dir)

@@ -18,6 +18,10 @@ TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
 TOOLS_FOLDER = r"Z:\dpolasky\projects\_BuildTests\tools"
 OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_results"
 
+CLEAR_PREV_TEMP_FILES = True    # clear .pepindex and .fragtmp files between runs (using folders below)
+RAW_FOLDER = r"Z:\dpolasky\projects\_BuildTests\raw"
+DB_FOLDER = r"Z:\dpolasky\projects\_BuildTests\databases"
+
 
 def parse_workflow_template(tools_folder, output_folder, outer_template_splits):
     """
@@ -109,6 +113,9 @@ def main():
             os.makedirs(output_dir)
 
         linux_commands = Fragpipe_Batch_Runner.make_commands_linux(run_list, output_dir, write_output=False, is_first_run=is_first_run)
+        if CLEAR_PREV_TEMP_FILES:
+            linux_commands.append('rm {}/*.pepindex\n'.format(Fragpipe_Batch_Runner.update_folder_linux(DB_FOLDER)))
+            linux_commands.append('rm {}/*.fragtmp\n'.format(Fragpipe_Batch_Runner.update_folder_linux(RAW_FOLDER)))
         is_first_run = False
         all_bash.extend(linux_commands)
 

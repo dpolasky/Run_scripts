@@ -13,12 +13,17 @@ To Use:
 import os
 import pathlib
 import Fragpipe_Batch_Runner
+TOOLS_FOLDER = r"Z:\dpolasky\projects\_BuildTests\tools"
 
 TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
-TOOLS_FOLDER = r"Z:\dpolasky\projects\_BuildTests\tools"
+# TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_single.tsv"
 OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_results"
+# OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_other-testing"
+# ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template.tsv"
+ADDITIONAL_WORKFLOWS_TEMPLATE = None
 
-CLEAR_PREV_TEMP_FILES = True    # clear .pepindex and .fragtmp files between runs (using folders below)
+CLEAR_PREV_TEMP_FILES = False
+# CLEAR_PREV_TEMP_FILES = True    # clear .pepindex and .fragtmp files between runs (using folders below)
 RAW_FOLDER = r"Z:\dpolasky\projects\_BuildTests\raw"
 DB_FOLDER = r"Z:\dpolasky\projects\_BuildTests\databases"
 
@@ -42,6 +47,17 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits):
     phil_path = [os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[4].lower() in x.lower()][0]
     ion_quant_path = [os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[5].lower() in x.lower()][0]
 
+    # add additional test workflows (not distributed with FragPipe) to each analysis
+    if ADDITIONAL_WORKFLOWS_TEMPLATE is not None:
+        with open(ADDITIONAL_WORKFLOWS_TEMPLATE, 'r') as readfile:
+            for line in readfile:
+                if line.startswith('#'):
+                    continue
+                inner_splits = line.split('\t')
+                workflow_path = pathlib.Path(ADDITIONAL_WORKFLOWS_TEMPLATE).parent / f'{inner_splits[0]}.workflow'
+                runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits))
+
+    # make main tests from built-in FragPipe workflows
     with open(outer_template_splits[1], 'r') as readfile:
         for line in readfile:
             if line.startswith('#'):
@@ -53,23 +69,29 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits):
             workflow_path = pathlib.Path(fragpipe_path) / 'workflows' / f'{inner_splits[0]}.workflow'
             if not os.path.exists(workflow_path):
                 print(f'Warning: workflow {workflow_path} does not exist! skipping')
-
-            fragpipe_run = Fragpipe_Batch_Runner.FragpipeRun(fragpipe=str(pathlib.Path(fragpipe_path) / 'bin' / 'fragpipe'),
-                                                             workflow=workflow_path,
-                                                             manifest=str(pathlib.Path(tools_folder).parent / 'manifests' / inner_splits[1]),
-                                                             output=str(output_folder / inner_splits[0]),
-                                                             ram=outer_template_splits[6],
-                                                             threads=outer_template_splits[7],
-                                                             msfragger=msfragger_path,
-                                                             philosopher=phil_path,
-                                                             ionquant=ion_quant_path,
-                                                             python="",
-                                                             skip_MSFragger=None,
-                                                             database_path=str(pathlib.Path(tools_folder).parent / 'databases' / inner_splits[2]),
-                                                             disable_list=None
-                                                             )
-            runs.append(fragpipe_run)
+            runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits))
     return runs
+
+
+def make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits):
+    """
+    Helper to make a single fragpipe_run from parsed template info
+    """
+    fragpipe_run = Fragpipe_Batch_Runner.FragpipeRun(fragpipe=str(pathlib.Path(fragpipe_path) / 'bin' / 'fragpipe'),
+                                                     workflow=workflow_path,
+                                                     manifest=str(pathlib.Path(tools_folder).parent / 'manifests' / inner_splits[1]),
+                                                     output=str(output_folder / inner_splits[0]),
+                                                     ram=outer_template_splits[6],
+                                                     threads=outer_template_splits[7],
+                                                     msfragger=msfragger_path,
+                                                     philosopher=phil_path,
+                                                     ionquant=ion_quant_path,
+                                                     python="",
+                                                     skip_MSFragger=None,
+                                                     database_path=str(pathlib.Path(tools_folder).parent / 'databases' / inner_splits[2]),
+                                                     disable_list=None
+                                                     )
+    return fragpipe_run
 
 
 def parse_template(template_file, tools_folder, output_folder):

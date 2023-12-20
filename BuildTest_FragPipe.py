@@ -15,12 +15,13 @@ import pathlib
 import Fragpipe_Batch_Runner
 TOOLS_FOLDER = r"Z:\dpolasky\projects\_BuildTests\tools"
 
-TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
-# TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_single.tsv"
+# TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
+TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_single.tsv"
 OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_results"
 # OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_other-testing"
-# ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template.tsv"
+# ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template_no-raw.tsv"
 ADDITIONAL_WORKFLOWS_TEMPLATE = None
+# ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template.tsv"
 
 CLEAR_PREV_TEMP_FILES = False
 # CLEAR_PREV_TEMP_FILES = True    # clear .pepindex and .fragtmp files between runs (using folders below)
@@ -42,10 +43,10 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits):
     """
     runs = []
     # resolve paths from version names
-    fragpipe_path = [os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[2].lower() in x.lower()][0]
-    msfragger_path = [os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[3].lower() in x.lower()][0]
-    phil_path = [os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[4].lower() in x.lower()][0]
-    ion_quant_path = [os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[5].lower() in x.lower()][0]
+    fragpipe_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[2].lower() in x.lower()], outer_template_splits[2])
+    msfragger_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[3].lower() in x.lower()], outer_template_splits[3])
+    phil_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[4].lower() in x.lower()], outer_template_splits[4])
+    ion_quant_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[5].lower() in x.lower()], outer_template_splits[5])
 
     # add additional test workflows (not distributed with FragPipe) to each analysis
     if ADDITIONAL_WORKFLOWS_TEMPLATE is not None:
@@ -71,6 +72,29 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits):
                 print(f'Warning: workflow {workflow_path} does not exist! skipping')
             runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits))
     return runs
+
+
+def resolve_versions(match_list, version_str):
+    """
+    resolve if multiple matches
+    :param match_list:
+    :type match_list:
+    :param version_str:
+    :type version_str:
+    :return:
+    :rtype:
+    """
+    if len(match_list) == 1:
+        return match_list[0]
+    for match in match_list:
+        if not('-rc' in version_str.lower() or '-build' in version_str.lower()):
+            if '-rc' in match.lower() or '-build' in match.lower():
+                continue
+            else:
+                return match
+        else:
+            print('warning: unexpected matches: {}'.format(match_list))
+            return match_list[0]
 
 
 def make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits):

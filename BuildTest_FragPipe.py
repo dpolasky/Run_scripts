@@ -15,21 +15,39 @@ import pathlib
 import Fragpipe_Batch_Runner
 TOOLS_FOLDER = r"Z:\dpolasky\projects\_BuildTests\tools"
 
-# TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
-TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_single.tsv"
+TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
+# TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_single.tsv"
 OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_results"
 # OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_other-testing"
-# ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template_no-raw.tsv"
-ADDITIONAL_WORKFLOWS_TEMPLATE = None
+ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template_no-raw.tsv"
+# ADDITIONAL_WORKFLOWS_TEMPLATE = None
 # ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template.tsv"
 
+# DISABLE_TOOLS = True
+DISABLE_TOOLS = False
 CLEAR_PREV_TEMP_FILES = False
 # CLEAR_PREV_TEMP_FILES = True    # clear .pepindex and .fragtmp files between runs (using folders below)
 RAW_FOLDER = r"Z:\dpolasky\projects\_BuildTests\raw"
 DB_FOLDER = r"Z:\dpolasky\projects\_BuildTests\databases"
 
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
+# filter/report onwards (PTM-S, OPair, quant)
+TOOLS_TO_DISABLE = [Fragpipe_Batch_Runner.DisableTools.MSFRAGGER, Fragpipe_Batch_Runner.DisableTools.PEPTIDEPROPHET, Fragpipe_Batch_Runner.DisableTools.PERCOLATOR, Fragpipe_Batch_Runner.DisableTools.PROTEINPROPHET, Fragpipe_Batch_Runner.DisableTools.PSMVALIDATION]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
+# TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PSMVALIDATION, DisableTools.PERCOLATOR]
+# TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
+ # OPair, quant only
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]
 
-def parse_workflow_template(tools_folder, output_folder, outer_template_splits):
+if not DISABLE_TOOLS:
+    TOOLS_TO_DISABLE = None
+
+
+def parse_workflow_template(tools_folder, output_folder, outer_template_splits, disable_list=None):
     """
     parse the workflow template, making a run for each line
     :param tools_folder: path to tools dir
@@ -56,7 +74,7 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits):
                     continue
                 inner_splits = line.split('\t')
                 workflow_path = pathlib.Path(ADDITIONAL_WORKFLOWS_TEMPLATE).parent / f'{inner_splits[0]}.workflow'
-                runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits))
+                runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits, disable_list))
 
     # make main tests from built-in FragPipe workflows
     with open(outer_template_splits[1], 'r') as readfile:
@@ -70,7 +88,7 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits):
             workflow_path = pathlib.Path(fragpipe_path) / 'workflows' / f'{inner_splits[0]}.workflow'
             if not os.path.exists(workflow_path):
                 print(f'Warning: workflow {workflow_path} does not exist! skipping')
-            runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits))
+            runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits, disable_list))
     return runs
 
 
@@ -97,7 +115,7 @@ def resolve_versions(match_list, version_str):
             return match_list[0]
 
 
-def make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits):
+def make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits, disable_list):
     """
     Helper to make a single fragpipe_run from parsed template info
     """
@@ -113,7 +131,7 @@ def make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, to
                                                      python="",
                                                      skip_MSFragger=None,
                                                      database_path=str(pathlib.Path(tools_folder).parent / 'databases' / inner_splits[2]),
-                                                     disable_list=None
+                                                     disable_list=disable_list
                                                      )
     return fragpipe_run
 
@@ -138,7 +156,7 @@ def parse_template(template_file, tools_folder, output_folder):
             splits = line.rstrip('\n').split('\t')
             name = splits[0]
             output_dir = pathlib.Path(output_folder) / name
-            runs_list = parse_workflow_template(tools_folder, output_dir, splits)
+            runs_list = parse_workflow_template(tools_folder, output_dir, splits, TOOLS_TO_DISABLE)
             runs_dict[name] = runs_list
     return runs_dict
 

@@ -256,6 +256,8 @@ def update_workflow_linux(workflow_path):
                 newline = update_folder_linux(line)
             elif line.startswith('msfragger.mass_offset_file'):
                 newline = update_folder_linux(line)
+            elif line.startswith('mbg.glycan_db'):
+                newline = update_folder_linux(line)
             else:
                 newline = line
             output.append(newline)
@@ -294,8 +296,6 @@ def make_commands_linux(run_list, output_path, write_output=True, is_first_run=T
     Format commands and write to linux shell script from the provided run list
     :param run_list: list of runs
     :type run_list: list[FragpipeRun]
-    :param fragpipe_path: full path to fragpipe executable
-    :type fragpipe_path: str
     :param output_path: full path to save output file
     :type output_path: str
     :return: void
@@ -391,7 +391,7 @@ def main(template_file, fragpipe_path, write_to_linux, disable_list):
     run_list = parse_template(template_file, disable_list, fragpipe_path)
     output_dir = os.path.dirname(template_file)
     if write_to_linux:
-        make_commands_linux(run_list, fragpipe_path, output_dir)
+        make_commands_linux(run_list, output_dir)
     else:
         make_commands_windows(run_list, fragpipe_path, output_dir)
 

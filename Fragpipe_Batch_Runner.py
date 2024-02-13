@@ -45,12 +45,14 @@ class DisableTools(Enum):
     FILTERandREPORT = 'report'
     FREEQUANT = 'freequant'
     LFQ = 'label-free-quant'        # note: must also be used with FreeQuant/IonQuant to disable
+    DIANN = 'dia-nn'
+    SPECLIB = 'speclibgen'
 
 
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
 # filter/report onwards (PTM-S, OPair, quant)
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
@@ -59,6 +61,8 @@ TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, Disable
 # TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
  # OPair, quant only
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]
+# speclib only
+TOOLS_TO_DISABLE = [DisableTools.SPECLIB, DisableTools.DIANN]
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
@@ -408,7 +412,10 @@ def update_folder_linux(folder_name):
     elif folder_name.startswith('\\\\corexfs'):
         folder_name = folder_name.replace('\\', '/')
         linux_name = folder_name.replace('//corexfs.med.umich.edu/proteomics', '/storage')
-    elif folder_name.startswith('Z:'):
+    elif '=Z:' in folder_name:
+        linux_name = folder_name.replace('Z:', '/storage')
+        linux_name = linux_name.replace('\\', '/')
+    elif 'Z:\\' in folder_name:
         linux_name = folder_name.replace('Z:', '/storage')
         linux_name = linux_name.replace('\\', '/')
     elif 'Z\\:' in folder_name:

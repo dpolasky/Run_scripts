@@ -406,12 +406,15 @@ def update_folder_linux(folder_name):
     :param folder_name: path to update
     :return: updated path
     """
-    if folder_name.startswith('//corexfs'):
+    # folder_name = folder_name.replace('\\\\', '\\')
+    if '//corexfs' in folder_name:
         linux_name = folder_name.replace('//corexfs.med.umich.edu/proteomics', '/storage')
         linux_name = linux_name.replace('\\', '/')
-    elif folder_name.startswith('\\\\corexfs'):
+    elif '\\corexfs' in folder_name:
         folder_name = folder_name.replace('\\', '/')
-        linux_name = folder_name.replace('//corexfs.med.umich.edu/proteomics', '/storage')
+        while '//' in folder_name:
+            folder_name = folder_name.replace('//', '/')
+        linux_name = folder_name.replace('/corexfs.med.umich.edu/proteomics', '/storage')
     elif '=Z:' in folder_name:
         linux_name = folder_name.replace('Z:', '/storage')
         linux_name = linux_name.replace('\\', '/')

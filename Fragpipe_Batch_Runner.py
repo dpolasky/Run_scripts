@@ -14,7 +14,7 @@ import datetime
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\20.0_msf-offsets\fragpipe\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
-# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\19.0\bin\fragpipe"
+# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\21.1\fragpipe\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\19.0-patch-version-comp\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\UCLA-tags\bin\fragpipe"
 # FRAGPIPE_PATH = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\MSFragger-GUI\build\install\fragpipe\bin\fragpipe.exe"
@@ -25,9 +25,10 @@ BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same fo
 OUTPUT_FOLDER_APPEND = '__FraggerResults'
 
 # NOTE: some tools are always disabled (see below) if copying - check there if you need PeptideProphet/etc after copying
-FILETYPES_FOR_COPY = ['pepXML']
+# FILETYPES_FOR_COPY = ['pepXML']
 # FILETYPES_FOR_COPY = ['pepXML', 'pin']
 # FILETYPES_FOR_COPY = ['.pep.xml', '.prot.xml', '_opair.txt']
+FILETYPES_FOR_COPY = ['.pep.xml', '.prot.xml']
 
 
 class DisableTools(Enum):
@@ -52,7 +53,7 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
 # filter/report onwards (PTM-S, OPair, quant)
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
@@ -62,14 +63,14 @@ class DisableTools(Enum):
  # OPair, quant only
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]
 # speclib only
-TOOLS_TO_DISABLE = [DisableTools.SPECLIB, DisableTools.DIANN]
+# TOOLS_TO_DISABLE = [DisableTools.SPECLIB, DisableTools.DIANN]
 
 if not DISABLE_TOOLS:
     TOOLS_TO_DISABLE = None
 
 # always disable if copying results files over (default: start at Filter)
-# DISABLE_IF_COPY = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
-DISABLE_IF_COPY = [DisableTools.MSFRAGGER]
+DISABLE_IF_COPY = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
+# DISABLE_IF_COPY = [DisableTools.MSFRAGGER]
 
 
 class FragpipeRun(object):

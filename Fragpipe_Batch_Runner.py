@@ -24,6 +24,8 @@ DISABLE_TOOLS = False
 BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same folder
 OUTPUT_FOLDER_APPEND = '__FraggerResults'
 
+IGNORE_PHIL = True  # FragPipe bundles Philosopher after 21.2-build39, and won't accept it as an argument
+
 # NOTE: some tools are always disabled (see below) if copying - check there if you need PeptideProphet/etc after copying
 # FILETYPES_FOR_COPY = ['pepXML']
 # FILETYPES_FOR_COPY = ['pepXML', 'pin']
@@ -334,13 +336,22 @@ def make_commands_linux(run_list, output_path, write_output=True, is_first_run=T
                     fragpipe_run.philosopher_path,
                     fragpipe_run.ionquant_path,
                     ]
+        if IGNORE_PHIL:
+            arg_list.remove(fragpipe_run.philosopher_path)
+
         if len(fragpipe_run.python_path) > 0:
             arg_list.append(fragpipe_run.python_path)
             arg_list.append(log_path)
-            output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} --config-python {} |& tee {}\n'.format(*arg_list))
+            if IGNORE_PHIL:
+                output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-ionquant {} --config-python {} |& tee {}\n'.format(*arg_list))
+            else:
+                output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} --config-python {} |& tee {}\n'.format(*arg_list))
         else:
             arg_list.append(log_path)
-            output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} |& tee {}\n'.format(*arg_list))
+            if IGNORE_PHIL:
+                output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-ionquant {} |& tee {}\n'.format(*arg_list))
+            else:
+                output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} |& tee {}\n'.format(*arg_list))
 
     if write_output:
         with open(batch_path, 'w', newline='') as outfile:

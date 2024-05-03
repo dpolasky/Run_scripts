@@ -11,20 +11,22 @@ from enum import Enum
 import datetime
 
 
-FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
-# FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\20.0_msf-offsets\fragpipe\bin\fragpipe"
-# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
+# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
+FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\21.1\fragpipe\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\19.0-patch-version-comp\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\UCLA-tags\bin\fragpipe"
 # FRAGPIPE_PATH = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\MSFragger-GUI\build\install\fragpipe\bin\fragpipe.exe"
+
+NEW_FRAGPIPE = True     # if using FragPipe newer than 21.2-build41, passing tools folder instead of individual tool paths
+
 USE_LINUX = True
 # DISABLE_TOOLS = True
 DISABLE_TOOLS = False
 BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same folder
 OUTPUT_FOLDER_APPEND = '__FraggerResults'
 
-IGNORE_PHIL = True  # FragPipe bundles Philosopher after 21.2-build39, and won't accept it as an argument
+DEFAULT_TOOLS_PATH = r"Z:\dpolasky\tools"
 
 # NOTE: some tools are always disabled (see below) if copying - check there if you need PeptideProphet/etc after copying
 # FILETYPES_FOR_COPY = ['pepXML']
@@ -52,10 +54,10 @@ class DisableTools(Enum):
     SPECLIB = 'speclibgen'
 
 
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
 # filter/report onwards (PTM-S, OPair, quant)
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
@@ -73,6 +75,21 @@ if not DISABLE_TOOLS:
 # always disable if copying results files over (default: start at Filter)
 DISABLE_IF_COPY = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
 # DISABLE_IF_COPY = [DisableTools.MSFRAGGER]
+
+TEMPLATE_COLS = {
+    'fragpipe_path': 0,
+    'workflow_path': 2,
+    'manifest_path': 2,
+    'output_path': 3,
+    'ram': 4,
+    'threads': 5,
+    'msfragger_path': 6,
+    'philosopher_path': 7,
+    'ionquant_path': 8,
+    'python_path': 9,
+    'skip_msfragger_path': 10,
+    'database_path': 11
+}
 
 
 class FragpipeRun(object):
@@ -194,6 +211,13 @@ class FragpipeRun(object):
             for line in output:
                 outfile.write(line)
 
+    def has_no_tool_paths(self):
+        """
+        check if all tool paths are specified
+        :return:
+        """
+        return self.msfragger_path == '' and self.ionquant_path == '' and self.philosopher_path == ''
+
 
 def update_manifest_linux(manifest_path):
     """
@@ -298,7 +322,7 @@ def parse_template(template_file, disable_list, fragpipe_path):
     return runs
 
 
-def make_commands_linux(run_list, output_path, write_output=True, is_first_run=True):
+def make_commands_linux(run_list, output_path, fragpipe_uses_tools_folder, write_output=True, is_first_run=True):
     """
     Format commands and write to linux shell script from the provided run list
     :param run_list: list of runs
@@ -326,31 +350,46 @@ def make_commands_linux(run_list, output_path, write_output=True, is_first_run=T
                 if not any(file.endswith(filetype_str) for file in os.listdir(fragpipe_run.original_output_path)):
                     output.append('ln -s {}/*{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
 
-        arg_list = [fragpipe_run.fragpipe_path,
-                    fragpipe_run.workflow_path,
-                    fragpipe_run.manifest_path,
-                    fragpipe_run.output_path,
-                    fragpipe_run.ram,
-                    fragpipe_run.threads,
-                    fragpipe_run.msfragger_path,
-                    fragpipe_run.philosopher_path,
-                    fragpipe_run.ionquant_path,
-                    ]
-        if IGNORE_PHIL:
-            arg_list.remove(fragpipe_run.philosopher_path)
-
+        python_arg = ''
         if len(fragpipe_run.python_path) > 0:
-            arg_list.append(fragpipe_run.python_path)
+            python_arg = ' --config-python {}'.format(fragpipe_run.python_path)
+        if fragpipe_uses_tools_folder:
+            arg_list = []
+            if fragpipe_run.has_no_tool_paths():
+                # no special versions desired - use the default tools folder for pathing
+                arg_list = [fragpipe_run.fragpipe_path,
+                            fragpipe_run.workflow_path,
+                            fragpipe_run.manifest_path,
+                            fragpipe_run.output_path,
+                            fragpipe_run.ram,
+                            fragpipe_run.threads,
+                            update_folder_linux(DEFAULT_TOOLS_PATH),
+                            python_arg
+                            ]
+            # todo:
+            # else:
+                # special versions requested. Copy them to a new subfolder and pass that
+
             arg_list.append(log_path)
-            if IGNORE_PHIL:
-                output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-ionquant {} --config-python {} |& tee {}\n'.format(*arg_list))
-            else:
-                output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} --config-python {} |& tee {}\n'.format(*arg_list))
+            output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-tools-folder {}{} |& tee {}\n'.format(*arg_list))
         else:
-            arg_list.append(log_path)
-            if IGNORE_PHIL:
-                output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-ionquant {} |& tee {}\n'.format(*arg_list))
+            # old style FragPipe (before 21.2-build41)
+            arg_list = [fragpipe_run.fragpipe_path,
+                        fragpipe_run.workflow_path,
+                        fragpipe_run.manifest_path,
+                        fragpipe_run.output_path,
+                        fragpipe_run.ram,
+                        fragpipe_run.threads,
+                        fragpipe_run.msfragger_path,
+                        fragpipe_run.philosopher_path,
+                        fragpipe_run.ionquant_path,
+                        ]
+            if len(fragpipe_run.python_path) > 0:
+                arg_list.append(fragpipe_run.python_path)
+                arg_list.append(log_path)
+                output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} --config-python {} |& tee {}\n'.format(*arg_list))
             else:
+                arg_list.append(log_path)
                 output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-msfragger {} --config-philosopher {} --config-ionquant {} |& tee {}\n'.format(*arg_list))
 
     if write_output:
@@ -407,7 +446,7 @@ def main(template_file, fragpipe_path, write_to_linux, disable_list):
     run_list = parse_template(template_file, disable_list, fragpipe_path)
     output_dir = os.path.dirname(template_file)
     if write_to_linux:
-        make_commands_linux(run_list, output_dir)
+        make_commands_linux(run_list, output_dir, NEW_FRAGPIPE)
     else:
         make_commands_windows(run_list, fragpipe_path, output_dir)
 

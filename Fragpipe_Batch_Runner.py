@@ -11,8 +11,8 @@ from enum import Enum
 import datetime
 
 
-# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
-FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
+FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
+# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\21.1\fragpipe\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\19.0-patch-version-comp\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\UCLA-tags\bin\fragpipe"
@@ -52,9 +52,10 @@ class DisableTools(Enum):
     LFQ = 'label-free-quant'        # note: must also be used with FreeQuant/IonQuant to disable
     DIANN = 'dia-nn'
     SPECLIB = 'speclibgen'
+    OPAIR = 'opair'
 
 
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
 # filter/report onwards (PTM-S, OPair, quant)
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
@@ -64,9 +65,10 @@ TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PSMVALIDATION, DisableTools.PERCOLATOR]
 # TOOLS_TO_DISABLE = [DisableTools.FREEQUANT, DisableTools.LFQ]
- # OPair, quant only
+# OPair, quant only
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]
 # speclib only
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD, DisableTools.OPAIR]
 # TOOLS_TO_DISABLE = [DisableTools.SPECLIB, DisableTools.DIANN]
 
 if not DISABLE_TOOLS:
@@ -139,7 +141,7 @@ class FragpipeRun(object):
         else:
             self.python_path = None
 
-        if skip_MSFragger is not None and skip_MSFragger is not '':
+        if skip_MSFragger is not None and skip_MSFragger != '':
             # disable the MSFragger run in this workflow and note the path to copy from for adding to the shell script
             edit_workflow_disable_tools(self.workflow_path, DISABLE_IF_COPY)
             if output == '':
@@ -314,7 +316,7 @@ def parse_template(template_file, disable_list, fragpipe_path):
         for line in list(readfile):
             if line.startswith('#'):
                 continue
-            splits = [x for x in line.split(',') if x is not '\n']
+            splits = [x for x in line.split(',') if x != '\n']
             splits[-1] = splits[-1].rstrip('\n')
             splits.insert(0, fragpipe_path)
             this_run = FragpipeRun(*splits, disable_list=disable_list)

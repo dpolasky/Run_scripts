@@ -2,7 +2,8 @@
 Utility for running FragPipe batches from headless mode using a template file (csv).
 Uses windows filechooser to select template file, but could generalize instead
 """
-
+import pathlib
+import re
 import tkinter
 from tkinter import filedialog
 import os
@@ -27,6 +28,8 @@ BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same fo
 OUTPUT_FOLDER_APPEND = '__FraggerResults'
 
 DEFAULT_TOOLS_PATH = r"Z:\dpolasky\tools"
+TEMP_TOOLS_NAME = "temp_tools"
+TEMP_TOOLS_FOLDERS = []
 
 # NOTE: some tools are always disabled (see below) if copying - check there if you need PeptideProphet/etc after copying
 # FILETYPES_FOR_COPY = ['pepXML']
@@ -59,7 +62,7 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
 # filter/report onwards (PTM-S, OPair, quant)
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]
@@ -68,7 +71,7 @@ class DisableTools(Enum):
 # OPair, quant only
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]
 # speclib only
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD, DisableTools.OPAIR]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD, DisableTools.OPAIR]
 # TOOLS_TO_DISABLE = [DisableTools.SPECLIB, DisableTools.DIANN]
 
 if not DISABLE_TOOLS:
@@ -338,6 +341,8 @@ def make_commands_linux(run_list, output_path, fragpipe_uses_tools_folder, write
     output = []
     if is_first_run:
         output.append('#!/bin/bash\nset -xe\n\n')   # bash header
+        if fragpipe_uses_tools_folder:
+            delete_old_temp_tools()
 
     for fragpipe_run in run_list:
         # copy original format manifest file to output dir before updating paths [disabled after 18.1 update fixes manifest copying]
@@ -359,20 +364,25 @@ def make_commands_linux(run_list, output_path, fragpipe_uses_tools_folder, write
             arg_list = []
             if fragpipe_run.has_no_tool_paths():
                 # no special versions desired - use the default tools folder for pathing
-                arg_list = [fragpipe_run.fragpipe_path,
-                            fragpipe_run.workflow_path,
-                            fragpipe_run.manifest_path,
-                            fragpipe_run.output_path,
-                            fragpipe_run.ram,
-                            fragpipe_run.threads,
-                            update_folder_linux(DEFAULT_TOOLS_PATH),
-                            python_arg
-                            ]
-            # todo:
-            # else:
+                tools_path = DEFAULT_TOOLS_PATH
+            else:
                 # special versions requested. Copy them to a new subfolder and pass that
+                temp_tools_name = "{}_{}".format(TEMP_TOOLS_NAME, len(TEMP_TOOLS_FOLDERS) + 1)
+                temp_tools_path = pathlib.Path(DEFAULT_TOOLS_PATH) / temp_tools_name
+                os.makedirs(temp_tools_path)
+                TEMP_TOOLS_FOLDERS.append(temp_tools_path)
+                tools_path = temp_tools_path
 
-            arg_list.append(log_path)
+            arg_list = [fragpipe_run.fragpipe_path,
+                        fragpipe_run.workflow_path,
+                        fragpipe_run.manifest_path,
+                        fragpipe_run.output_path,
+                        fragpipe_run.ram,
+                        fragpipe_run.threads,
+                        update_folder_linux(tools_path),
+                        python_arg,
+                        log_path
+                        ]
             output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-tools-folder {}{} |& tee {}\n'.format(*arg_list))
         else:
             # old style FragPipe (before 21.2-build41)
@@ -485,6 +495,18 @@ def update_folder_linux(folder_name):
     else:
         linux_name = folder_name
     return linux_name
+
+
+def delete_old_temp_tools():
+    """
+    delete any previous runs' temp folders
+    :return: void
+    """
+    pattern_str = r"{}_\d+".format(TEMP_TOOLS_NAME)
+    temp_pattern = re.compile(pattern_str)
+    for pathname in os.listdir(DEFAULT_TOOLS_PATH):
+        if os.path.isdir(os.path.join(DEFAULT_TOOLS_PATH, pathname)) and temp_pattern.match(pathname):
+            shutil.rmtree(os.path.join(DEFAULT_TOOLS_PATH, pathname))
 
 
 if __name__ == '__main__':

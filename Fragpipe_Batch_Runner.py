@@ -30,6 +30,7 @@ OUTPUT_FOLDER_APPEND = '__FraggerResults'
 DEFAULT_TOOLS_PATH = r"Z:\dpolasky\tools"
 TEMP_TOOLS_NAME = "temp_tools"
 TEMP_TOOLS_FOLDERS = []
+DIA_TRACER_PATH = r"Z:\dpolasky\tools\diaTracer-1.1.3.jar"      # not implemented to change versions of this, just needed for temp tools copying
 
 # NOTE: some tools are always disabled (see below) if copying - check there if you need PeptideProphet/etc after copying
 # FILETYPES_FOR_COPY = ['pepXML']
@@ -348,18 +349,18 @@ def make_commands_linux(run_list, output_path, fragpipe_uses_tools_folder, write
         # copy original format manifest file to output dir before updating paths [disabled after 18.1 update fixes manifest copying]
         # shutil.copy(fragpipe_run.manifest_path, os.path.join(fragpipe_run.output_path, os.path.basename(fragpipe_run.manifest_path)))
 
-        fragpipe_run.update_linux()
         current_time = datetime.datetime.now()
-        log_path = '{}/log-fragpipe_{}.txt'.format(fragpipe_run.output_path, current_time.strftime("%Y-%m-%d_%H-%M-%S"))
+        log_path = '{}/log-fragpipe_{}.txt'.format(update_folder_linux(fragpipe_run.output_path), current_time.strftime("%Y-%m-%d_%H-%M-%S"))
         if fragpipe_run.skip_msfragger_path is not None:
             for filetype_str in FILETYPES_FOR_COPY:
+                fragpipe_run.update_linux()
                 # link necessary file types from the copied analysis. Check if the needed files exist (from a previous attempt at the run) and write commands to link if not
                 if not any(file.endswith(filetype_str) for file in os.listdir(fragpipe_run.original_output_path)):
                     output.append('ln -s {}/*{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))
 
         python_arg = ''
         if len(fragpipe_run.python_path) > 0:
-            python_arg = ' --config-python {}'.format(fragpipe_run.python_path)
+            python_arg = ' --config-python {}'.format(update_folder_linux(fragpipe_run.python_path))
         if fragpipe_uses_tools_folder:
             arg_list = []
             if fragpipe_run.has_no_tool_paths():
@@ -371,8 +372,12 @@ def make_commands_linux(run_list, output_path, fragpipe_uses_tools_folder, write
                 temp_tools_path = pathlib.Path(DEFAULT_TOOLS_PATH) / temp_tools_name
                 os.makedirs(temp_tools_path)
                 TEMP_TOOLS_FOLDERS.append(temp_tools_path)
-                tools_path = temp_tools_path
+                tools_path = str(temp_tools_path)
+                shutil.copy(fragpipe_run.msfragger_path, temp_tools_path / os.path.basename(fragpipe_run.msfragger_path))
+                shutil.copy(fragpipe_run.ionquant_path, temp_tools_path / os.path.basename(fragpipe_run.ionquant_path))
+                shutil.copy(DIA_TRACER_PATH, temp_tools_path / os.path.basename(DIA_TRACER_PATH))
 
+            fragpipe_run.update_linux()
             arg_list = [fragpipe_run.fragpipe_path,
                         fragpipe_run.workflow_path,
                         fragpipe_run.manifest_path,
@@ -385,6 +390,7 @@ def make_commands_linux(run_list, output_path, fragpipe_uses_tools_folder, write
                         ]
             output.append('{} --headless --workflow {} --manifest {} --workdir {} --ram {} --threads {} --config-tools-folder {}{} |& tee {}\n'.format(*arg_list))
         else:
+            fragpipe_run.update_linux()
             # old style FragPipe (before 21.2-build41)
             arg_list = [fragpipe_run.fragpipe_path,
                         fragpipe_run.workflow_path,

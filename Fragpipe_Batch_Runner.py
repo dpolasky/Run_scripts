@@ -353,7 +353,6 @@ def make_commands_linux(run_list, output_path, fragpipe_uses_tools_folder, write
         log_path = '{}/log-fragpipe_{}.txt'.format(update_folder_linux(fragpipe_run.output_path), current_time.strftime("%Y-%m-%d_%H-%M-%S"))
         if fragpipe_run.skip_msfragger_path is not None:
             for filetype_str in FILETYPES_FOR_COPY:
-                fragpipe_run.update_linux()
                 # link necessary file types from the copied analysis. Check if the needed files exist (from a previous attempt at the run) and write commands to link if not
                 if not any(file.endswith(filetype_str) for file in os.listdir(fragpipe_run.original_output_path)):
                     output.append('ln -s {}/*{} {}\n'.format(update_folder_linux(fragpipe_run.skip_msfragger_path), filetype_str, update_folder_linux(fragpipe_run.output_path)))

@@ -246,6 +246,23 @@ def update_manifest_linux(manifest_path):
     return newpath
 
 
+def update_manifest_windows(manifest_path):
+    """
+    update the manifest file to Windows paths and save in place
+    :param manifest_path: full path to manifest file
+    :type manifest_path: str
+    :return:
+    """
+    output = []
+    with open(manifest_path, 'r') as readfile:
+        for line in list(readfile):
+            newline = update_folder_windows(line)
+            output.append(newline)
+    with open(manifest_path, 'w') as outfile:
+        for line in output:
+            outfile.write(line)
+
+
 def edit_workflow_disable_tools(workflow_path, disable_list):
     """
     Edit the workflow file to change the specified tools to not be run
@@ -500,6 +517,18 @@ def update_folder_linux(folder_name):
     else:
         linux_name = folder_name
     return linux_name
+
+
+def update_folder_windows(folder_name):
+    """
+    helper to auto update linux directories to windows, correcting /storage to Z:
+    :param folder_name:
+    :return:
+    """
+    output = folder_name
+    if "/storage" in folder_name:
+        output = folder_name.replace('/storage', 'Z:')
+    return output.replace('/', '\\')
 
 
 def delete_old_temp_tools():

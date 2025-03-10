@@ -21,8 +21,8 @@ TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
 # TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_single.tsv"
 OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_results"
 # OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_other-testing"
-ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template_no-raw.tsv"
-# ADDITIONAL_WORKFLOWS_TEMPLATE = None
+# ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template_no-raw.tsv"
+ADDITIONAL_WORKFLOWS_TEMPLATE = None
 # ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template.tsv"
 
 # DISABLE_TOOLS = True

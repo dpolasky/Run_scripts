@@ -7,7 +7,9 @@ import pathlib
 import os
 from Fragpipe_Batch_Runner import update_manifest_windows
 
-path = r"Z:\dpolasky\projects\Glyco\OPair_comparison\Nielsen_skin-TMT-oglyc\__FraggerResults\2025-01-21_semi-STAG-sc12x7_opair-deltas"
+# path = r"Z:\dpolasky\projects\Glyco\OPair_comparison\Nielsen_skin-TMT-oglyc\__FraggerResults\2025-01-21_semi-STAG-sc12x7_opair-deltas"
+# path = r"Z:\crojaram\FPOP_Project\FPOP_DIA"
+path = r"Z:\dpolasky\projects\Glyco\pGlyco2\__FraggerResults\2025-02-12_1670-nh4-fe-na-mouse5"
 
 
 def main(fragpipe_folder_path):

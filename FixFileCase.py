@@ -7,9 +7,9 @@ import os
 import tkinter
 from tkinter import messagebox
 
-
-EDIT_DIR = r"C:\Users\dpolasky\IdeaProjects\msfragger\src\edu\umich\andykong\msfragger"
-# EDIT_DIR = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\MSFragger-GUI"
+EDIT_DIR = r"C:\Users\dpolasky\Repositories\msfragger\src\edu\umich\andykong\msfragger"
+# EDIT_DIR = r"C:\Users\dpolasky\IdeaProjects\msfragger\src\edu\umich\andykong\msfragger"
+# EDIT_DIR = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\FragPipe-GUI"
 
 
 def single_folder(edit_dir):

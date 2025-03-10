@@ -12,12 +12,13 @@ from enum import Enum
 import datetime
 
 
+# TODO: add a finder now that copying script is different...
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\21.1\fragpipe\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\19.0-patch-version-comp\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\UCLA-tags\bin\fragpipe"
-# FRAGPIPE_PATH = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\MSFragger-GUI\build\install\fragpipe\bin\fragpipe.exe"
+# FRAGPIPE_PATH = r"C:\Users\dpolasky\GitRepositories\FragPipe\FragPipe\FragPipe-GUI\build\install\fragpipe\bin\fragpipe.exe"
 
 NEW_FRAGPIPE = True     # if using FragPipe newer than 21.2-build41, passing tools folder instead of individual tool paths
 
@@ -60,10 +61,10 @@ class DisableTools(Enum):
 
 
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
 # filter/report onwards (PTM-S, OPair, quant)
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PTMPROPHET]

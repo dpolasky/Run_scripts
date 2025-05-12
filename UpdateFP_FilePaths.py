@@ -10,7 +10,8 @@ from Fragpipe_Batch_Runner import update_manifest_windows, update_folder_windows
 # path = r"Z:\dpolasky\projects\Glyco\OPair_comparison\Nielsen_skin-TMT-oglyc\__FraggerResults\2025-01-21_semi-STAG-sc12x7_opair-deltas"
 # path = r"Z:\crojaram\FPOP_Project\FPOP_DIA"
 # path = r"Z:\dpolasky\projects\Glyco\pGlyco2\__FraggerResults\2025-02-12_1670-nh4-fe-na-mouse5"
-path = r"Z:\dpolasky\projects\_BuildTests\_results\2025-05-01_23.0-build42\Open"
+# path = r"Z:\dpolasky\projects\_BuildTests\_results\2025-05-01_23.0-build42\Open"
+path = r"Z:\crojaram\ROSA_MULTIPLEXFOOTPRINTING\2025_May\2_2th_SamplePTMP-68only"
 
 
 def update_shepherd_config(fragpipe_folder_path):
@@ -21,8 +22,8 @@ def update_shepherd_config(fragpipe_folder_path):
     """
     file_path = pathlib.Path(fragpipe_folder_path) / "shepherd.config"
     if not os.path.exists(file_path):
-        print('Error: could not find manifest file {}'.format(file_path))
-        exit(1)
+        print('Error: could not find shepherd.config file {}'.format(file_path))
+        return
 
     # save a copy
     copy_path = pathlib.Path(fragpipe_folder_path) / "shepherd_copy.config"

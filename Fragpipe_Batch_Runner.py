@@ -12,8 +12,8 @@ from enum import Enum
 import datetime
 
 
-# TODO: add a finder now that copying script is different...
-FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
+FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current"
+# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\21.1\fragpipe\bin\fragpipe"
 # FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\19.0-patch-version-comp\bin\fragpipe"
@@ -549,5 +549,12 @@ if __name__ == '__main__':
     root.withdraw()
 
     template = filedialog.askopenfilename(filetypes=[('FP Template', '.csv')])
-    main(template, FRAGPIPE_PATH, USE_LINUX, TOOLS_TO_DISABLE)
+    fragpipes = [os.path.join(FRAGPIPE_PATH, x) for x in os.listdir(FRAGPIPE_PATH)]
+    if len(fragpipes) == 0:
+        print('Error: could not find any fragpipe in {}'.format(FRAGPIPE_PATH))
+        exit(1)
+    if len(fragpipes) > 1:
+        print('Warning: found multiple fragpipes in {} - using {}'.format(FRAGPIPE_PATH, fragpipes[0]))
+    fp_path = pathlib.Path(fragpipes[0]) / 'bin' / 'fragpipe'
+    main(template, str(fp_path), USE_LINUX, TOOLS_TO_DISABLE)
     print('Done!')

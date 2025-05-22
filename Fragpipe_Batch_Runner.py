@@ -13,6 +13,7 @@ import datetime
 
 
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current"
+# FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\23.0"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\21.1\fragpipe\bin\fragpipe"
@@ -368,7 +369,7 @@ def make_commands_linux(run_list, output_path, fragpipe_uses_tools_folder, write
         # shutil.copy(fragpipe_run.manifest_path, os.path.join(fragpipe_run.output_path, os.path.basename(fragpipe_run.manifest_path)))
 
         current_time = datetime.datetime.now()
-        log_path = '{}/log-fragpipe_{}.txt'.format(update_folder_linux(fragpipe_run.output_path), current_time.strftime("%Y-%m-%d_%H-%M-%S"))
+        log_path = '{}/log_fragpipe_{}.txt'.format(update_folder_linux(fragpipe_run.output_path), current_time.strftime("%Y-%m-%d_%H-%M-%S"))
         if fragpipe_run.skip_msfragger_path is not None:
             for filetype_str in FILETYPES_FOR_COPY:
                 # link necessary file types from the copied analysis. Check if the needed files exist (from a previous attempt at the run) and write commands to link if not

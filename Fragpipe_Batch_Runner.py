@@ -12,8 +12,8 @@ from enum import Enum
 import datetime
 
 
-# FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current"
-FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\23.0"
+FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current"
+# FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\23.0"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\21.1\fragpipe\bin\fragpipe"
@@ -30,9 +30,10 @@ BATCH_INCREMENT = ''    # set to '2' (or higher) for multiple batches in same fo
 OUTPUT_FOLDER_APPEND = '__FraggerResults'
 
 DEFAULT_TOOLS_PATH = r"Z:\dpolasky\tools"
+# DEFAULT_TOOLS_PATH = r"Z:\dpolasky\tools\23.0_tools"
 TEMP_TOOLS_NAME = "temp_tools"
 TEMP_TOOLS_FOLDERS = []
-DIA_TRACER_PATH = r"Z:\dpolasky\tools\diaTracer-1.2.5.jar"      # not implemented to change versions of this, just needed for temp tools copying
+DIA_TRACER_PATH = r"Z:\dpolasky\tools\diaTracer-1.3.3.jar"      # not implemented to change versions of this, just needed for temp tools copying
 EXT_FOLDER = r"Z:\dpolasky\tools\ext"
 
 # NOTE: some tools are always disabled (see below) if copying - check there if you need PeptideProphet/etc after copying
@@ -535,6 +536,8 @@ def update_folder_windows(folder_name):
     output = folder_name
     if "/storage" in folder_name:
         output = folder_name.replace('/storage', 'Z:')
+    if "/nfs/corexfs/proteomic" in folder_name:
+        output = folder_name.replace("/nfs/corexfs/proteomic", 'Z:')
     return output.replace('/', '\\')
 
 
@@ -560,7 +563,7 @@ if __name__ == '__main__':
         print('Error: could not find any fragpipe in {}'.format(FRAGPIPE_PATH))
         exit(1)
     if len(fragpipes) > 1:
-        print('Warning: found multiple fragpipes in {} - using {}'.format(FRAGPIPE_PATH, fragpipes[0]))
-    fp_path = pathlib.Path(fragpipes[0]) / 'bin' / 'fragpipe'
+        print('Warning: found multiple fragpipes in {} - using {}'.format(FRAGPIPE_PATH, fragpipes[-1]))
+    fp_path = pathlib.Path(fragpipes[-1]) / 'bin' / 'fragpipe'
     main(template, str(fp_path), USE_LINUX, TOOLS_TO_DISABLE)
     print('Done!')

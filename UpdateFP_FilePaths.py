@@ -11,7 +11,8 @@ from Fragpipe_Batch_Runner import update_manifest_windows, update_folder_windows
 # path = r"Z:\crojaram\FPOP_Project\FPOP_DIA"
 # path = r"Z:\dpolasky\projects\Glyco\pGlyco2\__FraggerResults\2025-02-12_1670-nh4-fe-na-mouse5"
 # path = r"Z:\dpolasky\projects\_BuildTests\_results\2025-05-01_23.0-build42\Open"
-path = r"Z:\crojaram\ROSA_MULTIPLEXFOOTPRINTING\2025_May\2_2th_SamplePTMP-68only"
+# path = r"Z:\crojaram\ROSA_MULTIPLEXFOOTPRINTING\2025_May\2_2th_SamplePTMP-68only"
+path = r"Z:\dpolasky\projects\misc_debugging-testing\MSFragger_exclusion-range-append\__FraggerResults\2025-10-02_msf-cutMO-fixed_narrow-excl"
 
 
 def update_shepherd_config(fragpipe_folder_path):
@@ -37,6 +38,8 @@ def update_shepherd_config(fragpipe_folder_path):
             if 'database =' in line:
                 lines[i] = update_folder_windows(line)
             elif 'dataset =' in line:
+                lines[i] = update_folder_windows(line)
+            elif "_list = " in line:
                 lines[i] = update_folder_windows(line)
         f.seek(0)
         f.writelines(lines)

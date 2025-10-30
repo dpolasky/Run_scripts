@@ -67,7 +67,7 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits, 
     if len(outer_template_splits[3].lower()) == 0:
         msfragger_path = ''
     else:
-        msfragger_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[3].lower() in x.lower()], outer_template_splits[3])
+        msfragger_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[3].lower() in x.lower()], outer_template_splits[3], extension='.jar')
     if len(outer_template_splits[4].lower()) == 0:
         phil_path = ''
     else:
@@ -75,7 +75,7 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits, 
     if len(outer_template_splits[5].lower()) == 0:
         ion_quant_path = ''
     else:
-        ion_quant_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[5].lower() in x.lower()], outer_template_splits[5])
+        ion_quant_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[5].lower() in x.lower()], outer_template_splits[5], extension='.jar')
 
     # add additional test workflows (not distributed with FragPipe) to each analysis
     if ADDITIONAL_WORKFLOWS_TEMPLATE is not None:
@@ -103,7 +103,7 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits, 
     return runs
 
 
-def resolve_versions(match_list, version_str):
+def resolve_versions(match_list, version_str, extension=None):
     """
     resolve if multiple matches
     :param match_list:
@@ -120,7 +120,8 @@ def resolve_versions(match_list, version_str):
             if '-rc' in match.lower() or '-build' in match.lower():
                 continue
             else:
-                return match
+                if extension is not None:
+                    return match + extension
         else:
             print('warning: unexpected matches: {}'.format(match_list))
             return match_list[0]

@@ -13,7 +13,7 @@ import datetime
 
 
 FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current"
-# FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\23.0"
+# FRAGPIPE_PATH = r"Z:\dpolasky\tools\_FragPipes\24.0"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\a_current\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\current2\bin\fragpipe"
 # FRAGPIPE_PATH = r"\\corexfs.med.umich.edu\proteomics\dpolasky\tools\_FragPipes\21.1\fragpipe\bin\fragpipe"
@@ -33,7 +33,7 @@ DEFAULT_TOOLS_PATH = r"Z:\dpolasky\tools"
 # DEFAULT_TOOLS_PATH = r"Z:\dpolasky\tools\23.0_tools"
 TEMP_TOOLS_NAME = "temp_tools"
 TEMP_TOOLS_FOLDERS = []
-DIA_TRACER_PATH = r"Z:\dpolasky\tools\diaTracer-1.3.3.jar"      # not implemented to change versions of this, just needed for temp tools copying
+DIA_TRACER_PATH = r"Z:\dpolasky\tools\diaTracer-2.2.1.jar"      # not implemented to change versions of this, just needed for temp tools copying
 EXT_FOLDER = r"Z:\dpolasky\tools\ext"
 
 # NOTE: some tools are always disabled (see below) if copying - check there if you need PeptideProphet/etc after copying
@@ -66,7 +66,7 @@ class DisableTools(Enum):
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION]
 # filter/report onwards (PTM-S, OPair, quant)
-TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
+# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT]     # PTM-S or quant only
 # TOOLS_TO_DISABLE = [DisableTools.PTMPROPHET]
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PSMVALIDATION, DisableTools.PTMPROPHET]
@@ -76,7 +76,7 @@ TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, Disable
 # OPair, quant only
 # TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD]
 # speclib only
-# TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD, DisableTools.OPAIR]
+TOOLS_TO_DISABLE = [DisableTools.MSFRAGGER, DisableTools.PEPTIDEPROPHET, DisableTools.PERCOLATOR, DisableTools.PROTEINPROPHET, DisableTools.PSMVALIDATION, DisableTools.FILTERandREPORT, DisableTools.PTMSHEPHERD, DisableTools.OPAIR]
 # TOOLS_TO_DISABLE = [DisableTools.SPECLIB, DisableTools.DIANN]
 
 if not DISABLE_TOOLS:
@@ -126,6 +126,8 @@ class FragpipeRun(object):
             output_name = os.path.join(OUTPUT_FOLDER_APPEND, os.path.basename(os.path.splitext(workflow)[0]))
         else:
             output_name = output
+            # append specified output name to base workflow name
+            # output_name = os.path.join(OUTPUT_FOLDER_APPEND, os.path.basename(os.path.splitext(workflow)[0])) + "_" + output
 
         # update output_dir to full path (template has only the unique name, not the full path), and make dir if it doesn't exist
         self.output_path = os.path.join(os.path.dirname(workflow), output_name)

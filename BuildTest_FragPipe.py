@@ -27,8 +27,8 @@ ADDITIONAL_WORKFLOWS_TEMPLATE = None
 
 # DISABLE_TOOLS = True
 DISABLE_TOOLS = False
-CLEAR_PREV_TEMP_FILES = False
-# CLEAR_PREV_TEMP_FILES = True    # clear .pepindex and .fragtmp files between runs (using folders below)
+# CLEAR_PREV_TEMP_FILES = False
+CLEAR_PREV_TEMP_FILES = True    # clear .pepindex and .fragtmp files between runs (using folders below)
 RAW_FOLDER = r"Z:\dpolasky\projects\_BuildTests\raw"
 DB_FOLDER = r"Z:\dpolasky\projects\_BuildTests\databases"
 
@@ -64,6 +64,10 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits, 
     runs = []
     # resolve paths from version names
     fragpipe_path = resolve_versions([os.path.join(FRAGPIPE_FOLDER, x) for x in os.listdir(FRAGPIPE_FOLDER) if outer_template_splits[2].lower() in x.lower()], outer_template_splits[2])
+    if fragpipe_path == '':
+        print(f'Error: could not find FragPipe version {outer_template_splits[2]} in {FRAGPIPE_FOLDER}!')
+        exit(1)
+
     if len(outer_template_splits[3].lower()) == 0:
         msfragger_path = ''
     else:

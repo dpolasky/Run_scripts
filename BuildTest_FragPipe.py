@@ -17,7 +17,8 @@ FRAGPIPE_FOLDER = r"Z:\dpolasky\projects\_BuildTests\tools"
 TOOLS_FOLDER = r"Z:\dpolasky\tools"
 NEW_FRAGPIPE = True     # >21.2-build40 specifying tools folder, not individual paths
 
-TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
+# TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
+TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template_speedTest.tsv"
 # TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_single.tsv"
 OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_results"
 # OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_other-testing"
@@ -27,8 +28,8 @@ ADDITIONAL_WORKFLOWS_TEMPLATE = None
 
 # DISABLE_TOOLS = True
 DISABLE_TOOLS = False
-# CLEAR_PREV_TEMP_FILES = False
-CLEAR_PREV_TEMP_FILES = True    # clear .pepindex and .fragtmp files between runs (using folders below)
+CLEAR_PREV_TEMP_FILES = False
+# CLEAR_PREV_TEMP_FILES = True    # clear .pepindex files between runs (using folders below)
 RAW_FOLDER = r"Z:\dpolasky\projects\_BuildTests\raw"
 DB_FOLDER = r"Z:\dpolasky\projects\_BuildTests\databases"
 
@@ -189,6 +190,7 @@ def main():
     is_first_run = True
     all_bash = []
     for run_name, run_list in runs_dict.items():
+        print('preparing {}'.format(run_name))
         output_dir = pathlib.Path(OUTPUT_FOLDER) / run_name
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -196,7 +198,7 @@ def main():
         linux_commands = Fragpipe_Batch_Runner.make_commands_linux(run_list, output_dir, NEW_FRAGPIPE, write_output=False, is_first_run=is_first_run)
         if CLEAR_PREV_TEMP_FILES:
             linux_commands.append('rm {}/*.pepindex\n'.format(Fragpipe_Batch_Runner.update_folder_linux(DB_FOLDER)))
-            linux_commands.append('rm {}/*.fragtmp\n'.format(Fragpipe_Batch_Runner.update_folder_linux(RAW_FOLDER)))
+            # linux_commands.append('rm {}/*.fragtmp\n'.format(Fragpipe_Batch_Runner.update_folder_linux(RAW_FOLDER)))
         is_first_run = False
         all_bash.extend(linux_commands)
 

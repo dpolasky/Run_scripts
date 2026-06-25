@@ -14,7 +14,7 @@ from Fragpipe_Batch_Runner import update_manifest_windows, update_folder_windows
 # path = r"Z:\dpolasky\projects\chemoproteomics\Hsu_Texas_DIA-chemoprot-TransfLearn\__FraggerResults\2026-02-06_DDA-open-diagmine"
 # path = r"Z:\crojaram\Detailed_MO\Output\PXD001468\2025_June\dMO"
 # path = r"Z:\dpolasky\projects\Glyco\Glycan_Assignment_PTMS\__FraggerResults\_yeast-3467_2025-10-27_2nh4-base-d1"
-path = r"Z:\dpolasky\projects\Glyco\DIA\nglyco\__FraggerResults\2026-05-15_mouse-brain_direct"
+path = r"Z:\dpolasky\projects\Glyco\HGI_2025\__FraggerResults\2026-05-13_mod-A-HCD_pG1670-noGA"
 
 
 def update_glycoshepherd_config(fragpipe_folder_path):
@@ -58,8 +58,10 @@ def update_shepherd_config(fragpipe_folder_path):
     """
     file_path = pathlib.Path(fragpipe_folder_path) / "shepherd.config"
     if not os.path.exists(file_path):
-        print('Warning: could not find shepherd.config file {}'.format(file_path))
-        return
+        file_path = pathlib.Path(fragpipe_folder_path) / "glycoshepherd.config"
+        if not os.path.exists(file_path):
+            print('Warning: could not find shepherd.config file {}'.format(file_path))
+            return
 
     # save a copy
     copy_path = pathlib.Path(fragpipe_folder_path) / "shepherd_copy.config"

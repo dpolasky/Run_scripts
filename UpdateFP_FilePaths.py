@@ -14,7 +14,7 @@ from Fragpipe_Batch_Runner import update_manifest_windows, update_folder_windows
 # path = r"Z:\dpolasky\projects\chemoproteomics\Hsu_Texas_DIA-chemoprot-TransfLearn\__FraggerResults\2026-02-06_DDA-open-diagmine"
 # path = r"Z:\crojaram\Detailed_MO\Output\PXD001468\2025_June\dMO"
 # path = r"Z:\dpolasky\projects\Glyco\Glycan_Assignment_PTMS\__FraggerResults\_yeast-3467_2025-10-27_2nh4-base-d1"
-path = r"Z:\dpolasky\projects\Glyco\HGI_2025\__FraggerResults\2026-05-13_mod-A-HCD_pG1670-noGA"
+path = r"Z:\dpolasky\projects\Glyco\HGI_2025\__FraggerResults\2025-09-15_mod-A_FINAL"
 
 
 def update_glycoshepherd_config(fragpipe_folder_path):
@@ -44,6 +44,8 @@ def update_glycoshepherd_config(fragpipe_folder_path):
             elif "_list = " in line:
                 lines[i] = update_folder_windows(line)
             elif "glyco_lib_path" in line:
+                lines[i] = update_folder_windows(line)
+            elif "lcms_dir" in line:
                 lines[i] = update_folder_windows(line)
         f.seek(0)
         f.writelines(lines)

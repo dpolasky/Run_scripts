@@ -17,8 +17,8 @@ FRAGPIPE_FOLDER = r"Z:\dpolasky\projects\_BuildTests\tools"
 TOOLS_FOLDER = r"Z:\dpolasky\tools"
 NEW_FRAGPIPE = True     # >21.2-build40 specifying tools folder, not individual paths
 
-# TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
-TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template_speedTest.tsv"
+TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template.tsv"
+# TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_template_speedTest.tsv"
 # TEST_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\_FragPipeTest_single.tsv"
 OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_results"
 # OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_other-testing"

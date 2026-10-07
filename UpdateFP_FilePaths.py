@@ -13,8 +13,8 @@ from Fragpipe_Batch_Runner import update_manifest_windows, update_folder_windows
 # path = r"Z:\dpolasky\projects\_BuildTests\_results\2026-03-06_msf-extAA-1\glyco-N-TMT"
 # path = r"Z:\dpolasky\projects\chemoproteomics\Hsu_Texas_DIA-chemoprot-TransfLearn\__FraggerResults\2026-02-06_DDA-open-diagmine"
 # path = r"Z:\crojaram\Detailed_MO\Output\PXD001468\2025_June\dMO"
-# path = r"Z:\dpolasky\projects\Glyco\Glycan_Assignment_PTMS\__FraggerResults\_yeast-3467_2025-10-27_2nh4-base-d1"
-path = r"Z:\dpolasky\projects\Glyco\HGI_2025\__FraggerResults\2025-09-15_mod-A_FINAL"
+# path = r"D:\_software-tests-D\FPOP_reporter\DIA"
+path = r"Z:\dpolasky\projects\Labile_PTMs\Phospho\Tran_PXD004415_2HCDs\__FraggerResults\2023-01-09_1o-2v-18-base"
 
 
 def update_glycoshepherd_config(fragpipe_folder_path):

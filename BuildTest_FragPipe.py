@@ -7,11 +7,13 @@ To Use:
 - set up the template with the analysis name, tool versions, and workflow template paths (NOTE: just need matching versions for tools, not full path)
 - run the script
 - run the generate bash script
-- analyze results
+- analyze results with PSM_scripts/RunTools/FragPipe_Test_Results_Better.py (summary counts, per-tool timing, and
+  regression comparisons of each workflow against its previous run)
 """
 
 import os
 import pathlib
+import sys
 import Fragpipe_Batch_Runner
 FRAGPIPE_FOLDER = r"Z:\dpolasky\projects\_BuildTests\tools"
 TOOLS_FOLDER = r"Z:\dpolasky\tools"
@@ -25,6 +27,11 @@ OUTPUT_FOLDER = r"Z:\dpolasky\projects\_BuildTests\_results"
 # ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template_no-raw.tsv"
 ADDITIONAL_WORKFLOWS_TEMPLATE = None
 # ADDITIONAL_WORKFLOWS_TEMPLATE = r"Z:\dpolasky\projects\_BuildTests\additional_test_workflows\template.tsv"
+
+# parameters set in every test workflow. Keeping temp files retains the MSFragger pepXML/pin outputs (deleted by
+# default in e.g. DIA workflows) so the MSFragger regression comparison can run for every workflow.
+WORKFLOW_PARAM_OVERRIDES = {'tab-run.delete_temp_files': 'false'}
+# WORKFLOW_PARAM_OVERRIDES = {}
 
 # DISABLE_TOOLS = True
 DISABLE_TOOLS = False
@@ -63,74 +70,80 @@ def parse_workflow_template(tools_folder, output_folder, outer_template_splits, 
     :rtype: list
     """
     runs = []
-    # resolve paths from version names
-    fragpipe_path = resolve_versions([os.path.join(FRAGPIPE_FOLDER, x) for x in os.listdir(FRAGPIPE_FOLDER) if outer_template_splits[2].lower() in x.lower()], outer_template_splits[2])
-    if fragpipe_path == '':
-        print(f'Error: could not find FragPipe version {outer_template_splits[2]} in {FRAGPIPE_FOLDER}!')
-        exit(1)
-
-    if len(outer_template_splits[3].lower()) == 0:
-        msfragger_path = ''
-    else:
-        msfragger_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[3].lower() in x.lower()], outer_template_splits[3], extension='.jar')
-    if len(outer_template_splits[4].lower()) == 0:
-        phil_path = ''
-    else:
-        phil_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[4].lower() in x.lower()], outer_template_splits[4])
-    if len(outer_template_splits[5].lower()) == 0:
-        ion_quant_path = ''
-    else:
-        ion_quant_path = resolve_versions([os.path.join(tools_folder, x) for x in os.listdir(tools_folder) if outer_template_splits[5].lower() in x.lower()], outer_template_splits[5], extension='.jar')
+    # resolve paths from version names (blank version = not specified, e.g. FragPipe uses the default tools folder)
+    fragpipe_version = outer_template_splits[2].strip()
+    if not fragpipe_version:
+        print('Error: no FragPipe version specified for test {}!'.format(outer_template_splits[0]))
+        sys.exit(1)
+    fragpipe_path = resolve_tool_path(FRAGPIPE_FOLDER, 'fragpipe', fragpipe_version)
+    msfragger_path = resolve_tool_path(tools_folder, 'MSFragger', outer_template_splits[3].strip(), extension='.jar')
+    phil_path = resolve_tool_path(tools_folder, 'philosopher', outer_template_splits[4].strip())
+    ion_quant_path = resolve_tool_path(tools_folder, 'IonQuant', outer_template_splits[5].strip(), extension='.jar')
 
     # add additional test workflows (not distributed with FragPipe) to each analysis
     if ADDITIONAL_WORKFLOWS_TEMPLATE is not None:
-        with open(ADDITIONAL_WORKFLOWS_TEMPLATE, 'r') as readfile:
-            for line in readfile:
-                if line.startswith('#'):
-                    continue
-                inner_splits = line.split('\t')
-                workflow_path = pathlib.Path(ADDITIONAL_WORKFLOWS_TEMPLATE).parent / f'{inner_splits[0]}.workflow'
-                runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits, disable_list))
-
-    # make main tests from built-in FragPipe workflows
-    with open(outer_template_splits[1], 'r') as readfile:
-        for line in readfile:
-            if line.startswith('#'):
-                continue
-            inner_splits = line.split('\t')
-
-            # fragpipe_path = pathlib.Path(tools_folder) / outer_template_splits[2]
-            # check workflow exists for this FragPipe version
-            workflow_path = pathlib.Path(fragpipe_path) / 'workflows' / f'{inner_splits[0]}.workflow'
+        for inner_splits in read_workflow_template(ADDITIONAL_WORKFLOWS_TEMPLATE):
+            workflow_path = pathlib.Path(ADDITIONAL_WORKFLOWS_TEMPLATE).parent / f'{inner_splits[0]}.workflow'
             if not os.path.exists(workflow_path):
                 print(f'Warning: workflow {workflow_path} does not exist! skipping')
+                continue
             runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits, disable_list))
+
+    # make main tests from built-in FragPipe workflows
+    for inner_splits in read_workflow_template(outer_template_splits[1]):
+        # check workflow exists for this FragPipe version
+        workflow_path = pathlib.Path(fragpipe_path) / 'workflows' / f'{inner_splits[0]}.workflow'
+        if not os.path.exists(workflow_path):
+            print(f'Warning: workflow {workflow_path} does not exist! skipping')
+            continue
+        runs.append(make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits, disable_list))
     return runs
 
 
-def resolve_versions(match_list, version_str, extension=None):
+def read_workflow_template(template_path):
     """
-    resolve if multiple matches
-    :param match_list:
-    :type match_list:
-    :param version_str:
-    :type version_str:
-    :return:
-    :rtype:
+    Read a workflows template (workflow name, manifest, database, uniques config), skipping comments and blank lines
+    :return: list of split lines
+    :rtype: list[list[str]]
     """
-    if len(match_list) == 1:
-        return match_list[0]
-    for match in match_list:
-        if not('-rc' in version_str.lower() or '-build' in version_str.lower()):
-            if '-rc' in match.lower() or '-build' in match.lower():
+    entries = []
+    with open(template_path, 'r') as readfile:
+        for line in readfile:
+            if line.startswith('#') or not line.strip():
                 continue
-            else:
-                if extension is not None:
-                    return match + extension
-        else:
-            print('warning: unexpected matches: {}'.format(match_list))
-            return match_list[0]
-    return ''       # not specified (e.g., Fragpipe uses tools folder, not individual versions)
+            entries.append([x.strip() for x in line.split('\t')])
+    return entries
+
+
+def resolve_tool_path(folder, prefix, version, extension=''):
+    """
+    Find the tool named '<prefix>-<version><extension>' in folder (case-insensitive), e.g. MSFragger-4.5-rc14.jar.
+    Falls back to that file inside a same-named subfolder (e.g. MSFragger-4.2/MSFragger-4.2.jar), then to the only
+    name that starts with the prefix and contains the version. Exits if the version can't be resolved uniquely.
+    :param folder: folder containing tools
+    :param prefix: tool name prefix (e.g. 'MSFragger')
+    :param version: version string from the test template. Blank = not specified
+    :param extension: file extension of the tool (e.g. '.jar'), or '' for folders/executables
+    :return: full path, or '' if no version specified
+    :rtype: str
+    """
+    if not version:
+        return ''
+    target = '{}-{}{}'.format(prefix, version, extension).lower()
+    names = os.listdir(folder)
+    for name in names:
+        if name.lower() == target:
+            return os.path.join(folder, name)
+    if extension:
+        for name in names:
+            inner_path = os.path.join(folder, name, name + extension)
+            if name.lower() == target[:-len(extension)] and os.path.exists(inner_path):
+                return inner_path
+    partial_matches = [x for x in names if x.lower().startswith(prefix.lower()) and version.lower() in x.lower()]
+    if len(partial_matches) == 1:
+        return os.path.join(folder, partial_matches[0])
+    print('Error: could not find a unique {} version {} in {}. Candidates: {}'.format(prefix, version, folder, partial_matches))
+    sys.exit(1)
 
 
 def make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, tools_folder, output_folder, outer_template_splits, workflow_path, inner_splits, disable_list):
@@ -151,6 +164,7 @@ def make_single_run(fragpipe_path, msfragger_path, phil_path, ion_quant_path, to
                                                      database_path=str(pathlib.Path(tools_folder).parent / 'databases' / inner_splits[2]),
                                                      disable_list=disable_list
                                                      )
+    Fragpipe_Batch_Runner.edit_workflow_params(fragpipe_run.workflow_path, WORKFLOW_PARAM_OVERRIDES)
     return fragpipe_run
 
 

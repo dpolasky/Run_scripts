@@ -295,6 +295,35 @@ def edit_workflow_disable_tools(workflow_path, disable_list):
             outfile.write(line)
 
 
+def edit_workflow_params(workflow_path, param_dict):
+    """
+    Set parameters in the workflow file, appending any that are not already present
+    :param workflow_path: full path to workflow file
+    :type workflow_path: str
+    :param param_dict: dict of parameter key: value (string)
+    :type param_dict: dict
+    :return: void
+    :rtype:
+    """
+    if not param_dict:
+        return
+    output = []
+    remaining = dict(param_dict)
+    with open(workflow_path, 'r') as readfile:
+        for line in readfile:
+            key = line.split('=', 1)[0].strip()
+            if not line.startswith('#') and '=' in line and key in remaining:
+                line = '{}={}\n'.format(key, remaining.pop(key))
+            output.append(line)
+    if len(output) > 0 and not output[-1].endswith('\n'):
+        output[-1] += '\n'
+    for key, value in remaining.items():
+        output.append('{}={}\n'.format(key, value))
+    with open(workflow_path, 'w') as outfile:
+        for line in output:
+            outfile.write(line)
+
+
 def update_workflow_linux(workflow_path):
     """
     update the path to the database file to linux path
